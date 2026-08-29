@@ -1,0 +1,11 @@
+{
+  "name": "health-agent",
+  "version": "0.1.0",
+  "type": "module",
+  "private": true,
+  "scripts": {
+    "log": "node --env-file=.env cli.js",
+    "dev": "node --env-file=.env dev.js",
+    "smoke": "node src/smoke.js"
+  }
+}
