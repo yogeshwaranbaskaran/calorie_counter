@@ -164,8 +164,14 @@ async function send() {
     const out = await res.json()
     thinking.remove()
 
-    if (out.error) return bubble('err', out.error)
-    history = out.history
+    // A rate-limited turn can still carry a finished proposal - show it, so a
+    // 429 never costs you the meal you just typed.
+    if (out.history) history = out.history
+    if (out.error) {
+      bubble('err', out.error)
+      if (out.proposal) proposalCard(out.proposal)
+      return
+    }
     if (out.calls?.length) bubble('tools', out.calls.join(' → '))
     if (out.reply) bubble('msg bot', out.reply)
     if (out.proposal) proposalCard(out.proposal)

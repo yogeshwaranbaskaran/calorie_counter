@@ -18,6 +18,11 @@ function toGemini(messages) {
     if (m.role === 'user') return { role: 'user', parts: [{ text: m.text }] }
 
     if (m.role === 'model') {
+      // Gemini 3 signs its reasoning and REQUIRES those signatures back on the
+      // next request, or tool calling 400s. Replaying the parts verbatim is the
+      // only way to keep them intact, so we kept them on the turn as _raw.
+      if (m._raw) return { role: 'model', parts: m._raw }
+
       const parts = []
       if (m.text) parts.push({ text: m.text })
       for (const c of m.calls ?? []) {
@@ -54,7 +59,16 @@ export async function llm({ system, messages, tools }) {
 
   if (!res.ok) {
     const detail = await res.text()
-    throw new Error(`LLM ${res.status}: ${detail.slice(0, 400)}`)
+    // Typed so the UI can say something useful instead of dumping Google's
+    // JSON at you. The free tier is only a few requests per minute, so 429 is
+    // an everyday event, not an exception.
+    const err = new Error(`LLM ${res.status}: ${detail.slice(0, 300)}`)
+    err.code =
+      res.status === 429 ? 'rate_limit'
+      : res.status === 400 && /API key/i.test(detail) ? 'bad_key'
+      : res.status === 400 ? 'bad_request'
+      : 'upstream'
+    throw err
   }
 
   const data = await res.json()
@@ -62,10 +76,12 @@ export async function llm({ system, messages, tools }) {
 
   // One model turn can hold several tool calls at once - it might look up
   // three foods in parallel rather than one at a time.
+  // _raw is provider-opaque: only this file reads it, so the seam holds.
   return {
     text: parts.filter((p) => p.text).map((p) => p.text).join('').trim(),
     calls: parts
       .filter((p) => p.functionCall)
       .map((p) => ({ name: p.functionCall.name, args: p.functionCall.args ?? {} })),
+    _raw: parts,
   }
 }

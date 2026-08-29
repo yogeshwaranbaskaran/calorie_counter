@@ -30,13 +30,13 @@ Rules:
 // the model's own output decides whether we go round again.
 export async function runTurn({ history, tools, onToolCall, complete = llm }) {
   for (let step = 0; step < MAX_STEPS; step++) {
-    const { text, calls } = await complete({
+    const { text, calls, _raw } = await complete({
       system: systemPrompt(),
       messages: history,
       tools: declarations,
     })
 
-    history.push({ role: 'model', text, calls })
+    history.push({ role: 'model', text, calls, _raw })
 
     // No tool calls means the model considers its turn finished.
     if (calls.length === 0) return text

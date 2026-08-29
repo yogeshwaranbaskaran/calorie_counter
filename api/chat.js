@@ -24,6 +24,15 @@ export default async function handler(req, res) {
     const reply = await runTurn({ history, tools, onToolCall: (c) => calls.push(c.name) })
     return send(res, 200, { reply, proposal: pending, calls, history })
   } catch (err) {
-    return send(res, 500, { error: String(err.message ?? err) })
+    const message = {
+      rate_limit: "Gemini's free tier is rate limited - wait a few seconds and say that again.",
+      bad_key: 'The Gemini API key is missing or wrong.',
+      bad_request: 'Gemini rejected the request. Check the server logs.',
+    }[err.code] ?? 'Something broke upstream. Try again.'
+    // The proposal survives the error: if log_meal already ran, the user can
+    // still confirm it rather than retyping the whole meal.
+    return send(res, err.code === 'rate_limit' ? 429 : 500, {
+      error: message, code: err.code ?? 'unknown', proposal: pending, history,
+    })
   }
 }
