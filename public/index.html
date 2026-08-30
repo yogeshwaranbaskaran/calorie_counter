@@ -249,7 +249,18 @@ $('say').onkeydown = (e) => e.key === 'Enter' && send()
 // would throw the keyboard up over the screen before you have looked at it.
 if (!matchMedia('(pointer:coarse)').matches) $('say').focus()
 refreshDay()
-if ('serviceWorker' in navigator) navigator.serviceWorker.register('/sw.js').catch(() => {})
+// Only register in production. Service workers run on localhost too, which
+// means a cached shell can silently shadow every local edit - all cost, no
+// benefit while developing. Any registration left over from before is torn
+// down here so a stale worker cannot outlive this change.
+if ('serviceWorker' in navigator) {
+  if (location.protocol === 'https:') {
+    navigator.serviceWorker.register('/sw.js').catch(() => {})
+  } else {
+    navigator.serviceWorker.getRegistrations().then((rs) => rs.forEach((r) => r.unregister()))
+    caches?.keys().then((ks) => ks.forEach((k) => caches.delete(k)))
+  }
+}
 </script>
 </body>
 </html>
