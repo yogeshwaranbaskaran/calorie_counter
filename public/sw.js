@@ -1,6 +1,6 @@
 // Shell cached so the app opens instantly and survives a flaky connection.
 // API calls always go to the network - a stale food log would be worse than none.
-const CACHE = 'health-v1'
+const CACHE = 'health-v2'
 const SHELL = ['/', '/index.html', '/manifest.json', '/icon.svg']
 
 self.addEventListener('install', (e) => {

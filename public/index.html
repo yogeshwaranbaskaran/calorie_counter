@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <meta name="theme-color" content="#0e1012">
-<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
 <link rel="manifest" href="/manifest.json">
 <link rel="icon" href="/icon.svg" type="image/svg+xml">
 <title>health agent</title>
@@ -159,7 +159,14 @@ async function refreshDay() {
     feed.querySelector('.intro')?.remove()
     if (d.rows.length) feed.prepend(todayPanel(d.rows))
     else if (!feed.children.length) feed.appendChild(intro())
-  } catch {}
+  } catch {
+    // The day failing to load must never leave a blank screen with a zero on
+    // it - that looks identical to a broken app and tells you nothing.
+    if (!feed.children.length) {
+      feed.appendChild(intro())
+      bubble('err', "Couldn't reach the server - is it still running?")
+    }
+  }
 }
 
 function gate(message) {
@@ -237,6 +244,10 @@ async function send() {
 
 $('send').onclick = send
 $('say').onkeydown = (e) => e.key === 'Enter' && send()
+
+// Focus on load so you can just type. Skipped on touch devices, where it
+// would throw the keyboard up over the screen before you have looked at it.
+if (!matchMedia('(pointer:coarse)').matches) $('say').focus()
 refreshDay()
 if ('serviceWorker' in navigator) navigator.serviceWorker.register('/sw.js').catch(() => {})
 </script>
