@@ -18,5 +18,19 @@ self.addEventListener('activate', (e) => {
 self.addEventListener('fetch', (e) => {
   const url = new URL(e.request.url)
   if (url.pathname.startsWith('/api/')) return
+
+  // Network-first for the page itself, so a redeploy is never masked by a
+  // stale cached shell; the cache is the offline fallback, not the source.
+  if (e.request.mode === 'navigate' || url.pathname === '/' || url.pathname.endsWith('.html')) {
+    return e.respondWith(
+      fetch(e.request)
+        .then((res) => {
+          const copy = res.clone()
+          caches.open(CACHE).then((c) => c.put(e.request, copy))
+          return res
+        })
+        .catch(() => caches.match(e.request).then((hit) => hit || caches.match('/')))
+    )
+  }
   e.respondWith(caches.match(e.request).then((hit) => hit || fetch(e.request)))
 })

@@ -7,10 +7,11 @@ import { fileURLToPath } from 'node:url'
 import chat from './api/chat.js'
 import commit from './api/commit.js'
 import day from './api/day.js'
+import entry from './api/entry.js'
 import { backend } from './src/store.js'
 
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), 'public')
-const routes = { '/api/chat': chat, '/api/commit': commit, '/api/day': day }
+const routes = { '/api/chat': chat, '/api/commit': commit, '/api/day': day, '/api/entry': entry }
 const MIME = {
   '.html': 'text/html', '.js': 'text/javascript', '.css': 'text/css',
   '.json': 'application/json', '.svg': 'image/svg+xml', '.png': 'image/png',

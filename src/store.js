@@ -90,10 +90,25 @@ export async function getLog(from, to) {
 export async function appendLog(entries) {
   if (!remote) {
     const log = await readJson('log.json', [])
-    log.push(...entries)
+    // Postgres gives rows a bigserial id; the JSON backend has to mint its own
+    // so the two behave identically to everything above this file.
+    let next = log.reduce((m, r) => Math.max(m, r.id ?? 0), 0)
+    log.push(...entries.map((e) => ({ id: ++next, ...e })))
     return writeJson('log.json', log)
   }
   await rest('log_entries', { method: 'POST', body: entries })
+}
+
+export async function deleteEntry(id) {
+  if (!remote) {
+    const log = await readJson('log.json', [])
+    const kept = log.filter((r) => String(r.id) !== String(id))
+    if (kept.length === log.length) return false
+    await writeJson('log.json', kept)
+    return true
+  }
+  await rest(`log_entries?id=eq.${encodeURIComponent(id)}`, { method: 'DELETE' })
+  return true
 }
 
 export const backend = () => (remote ? 'supabase' : 'json')
