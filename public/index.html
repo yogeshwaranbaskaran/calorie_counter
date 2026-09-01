@@ -464,12 +464,18 @@ function gate(message) {
     <button class="b go" id="ok" style="width:100%">unlock</button></div>`
   const go = () => { localStorage.setItem('passcode', $('p').value.trim()); location.reload() }
   $('ok').onclick = go
-  $('p').onkeydown = (e) => e.key === 'Enter' && go()
+  $('p').addEventListener('keydown', (e) => { if (e.key === 'Enter') go() })
   $('p').focus()
 }
 
 $('send').onclick = send
-$('say').onkeydown = (e) => e.key === 'Enter' && send()
+// MUST be addEventListener, not `onkeydown = ...`. An arrow body of
+// `e.key === 'Enter' && send()` RETURNS FALSE for every other key, and
+// returning false from an on* handler calls preventDefault() - which for a
+// keydown means the character is never inserted. The box looked focused and
+// silently swallowed everything typed into it. addEventListener ignores the
+// return value, so the default action survives.
+$('say').addEventListener('keydown', (e) => { if (e.key === 'Enter') send() })
 render()
 
 // Focus on load so you can just type. Skipped on touch, where it would throw
