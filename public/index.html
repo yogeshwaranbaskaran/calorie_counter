@@ -450,7 +450,9 @@ async function render() {
 function switchTab(name) {
   tab = name
   document.querySelectorAll('nav button').forEach((b) => b.classList.toggle('on', b.dataset.tab === name))
-  $('bar').style.display = name === 'log' ? 'flex' : 'none'
+  // The input stays on every tab. Hiding it on three of four screens meant
+  // that "I can't type" was sometimes literally true, by design, and there was
+  // nothing on screen to explain why.
   render()
 }
 document.querySelectorAll('nav button').forEach((b) => (b.onclick = () => switchTab(b.dataset.tab)))
