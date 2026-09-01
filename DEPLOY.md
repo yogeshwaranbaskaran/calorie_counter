@@ -32,7 +32,7 @@ Set five environment variables:
 | name | value |
 |---|---|
 | `GEMINI_API_KEY` | the 39-char `AIzaSy…` key from the new account |
-| `GEMINI_MODEL` | `gemini-3.6-flash` |
+| `GEMINI_MODEL` | `gemini-3.5-flash-lite` |
 | `SUPABASE_URL` | from step 1 |
 | `SUPABASE_SERVICE_KEY` | from step 1 |
 | `APP_PASSCODE` | any phrase you'll remember |

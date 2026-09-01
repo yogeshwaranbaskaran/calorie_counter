@@ -40,8 +40,11 @@ function toGemini(messages) {
   })
 }
 
-export async function llm({ system, messages, tools }) {
-  const model = process.env.GEMINI_MODEL || 'gemini-3.6-flash'
+export async function llm({ system, messages, tools, thinking }) {
+  // gemini-3.6-flash is capped at TWENTY requests per DAY on the free tier,
+  // which three meals plus an insights run would exhaust. flash-lite has real
+  // headroom, answers in about a second, and handles this tool loop fine.
+  const model = process.env.GEMINI_MODEL || 'gemini-3.5-flash-lite'
   const key = process.env.GEMINI_API_KEY
   if (!key) throw new Error('GEMINI_API_KEY is not set - copy .env.example to .env')
 
@@ -50,6 +53,11 @@ export async function llm({ system, messages, tools }) {
     systemInstruction: { parts: [{ text: system }] },
   }
   if (tools?.length) body.tools = [{ functionDeclarations: tools }]
+  // Logging a meal is recall and bookkeeping, not hard reasoning, and every
+  // turn costs the user real seconds. `low` roughly halves the latency.
+  // Measured: thinkingBudget:0 is rejected outright by 3.6; thinkingLevel is
+  // the parameter that works.
+  if (thinking) body.generationConfig = { thinkingConfig: { thinkingLevel: thinking } }
 
   const res = await fetch(`${ENDPOINT}/${model}:generateContent?key=${key}`, {
     method: 'POST',

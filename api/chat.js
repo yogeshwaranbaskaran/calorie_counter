@@ -21,7 +21,11 @@ export default async function handler(req, res) {
 
   try {
     const calls = []
-    const reply = await runTurn({ history, tools, onToolCall: (c) => calls.push(c.name) })
+    const reply = await runTurn({
+      history, tools,
+      onToolCall: (c) => calls.push(c.name),
+      stop: () => pending !== null,
+    })
     return send(res, 200, { reply, proposal: pending, calls, history })
   } catch (err) {
     const message = {
