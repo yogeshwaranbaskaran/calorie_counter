@@ -10,8 +10,10 @@
 <title>health agent</title>
 <style>
 :root{
-  --bg:#0e1012; --surface:#17191d; --line:#24272c; --text:#e8eaed;
+  --bg:#0e1012; --surface:#17191d; --raised:#1d2026; --line:#24272c; --text:#e8eaed;
   --muted:#8b9199; --faint:#5c626a; --accent:#7dd88f; --danger:#e07a7a;
+  /* macro series - validated for this dark surface (CVD dE 9.4, normal 20.9) */
+  --protein:#3987e5; --carbs:#d95926; --fat:#199e70;
   --radius:14px;
 }
 *{box-sizing:border-box}
@@ -20,22 +22,29 @@ body{
   margin:0; background:var(--bg); color:var(--text);
   font:15px/1.5 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;
   display:flex; flex-direction:column;
-  padding:env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left);
+  padding:env(safe-area-inset-top) env(safe-area-inset-right) 0 env(safe-area-inset-left);
 }
+h1,h2,h3,h4{margin:0}
 header{
   display:flex; align-items:baseline; gap:9px; padding:13px 16px;
-  border-bottom:1px solid var(--line); position:sticky; top:0; z-index:5; background:var(--bg);
+  border-bottom:1px solid var(--line); background:var(--bg); flex:0 0 auto;
 }
 header b{font-size:23px; font-variant-numeric:tabular-nums; line-height:1}
 header .u{color:var(--muted); font-size:13px}
 header .sp{margin-left:auto; color:var(--muted); font-size:13px; font-variant-numeric:tabular-nums}
-main{flex:1; overflow-y:auto; padding:16px; display:flex; flex-direction:column; gap:12px}
+main{flex:1; overflow-y:auto; padding:16px; display:flex; flex-direction:column; gap:14px; min-height:0}
 
-/* ---- empty state: the app must say what it is and what to type ---- */
+.sect{background:var(--surface); border:1px solid var(--line); border-radius:var(--radius); padding:14px}
+.sect > h3, .lbl{
+  font-size:11px; color:var(--faint); font-weight:600;
+  letter-spacing:.06em; text-transform:uppercase; margin-bottom:10px;
+}
+.hint{color:var(--muted); font-size:13.5px; margin:0}
+
+/* ---------- empty / intro ---------- */
 .intro{margin:auto 0; padding:8px 2px}
-.intro h1{font-size:19px; margin:0 0 6px; font-weight:600}
+.intro h1{font-size:19px; margin-bottom:6px; font-weight:600}
 .intro p{margin:0 0 18px; color:var(--muted); font-size:14px; max-width:34ch}
-.intro small{display:block; color:var(--faint); font-size:12px; margin-bottom:9px; letter-spacing:.03em; text-transform:uppercase}
 .eg{
   display:block; width:100%; text-align:left; margin-bottom:7px; padding:11px 13px;
   background:var(--surface); border:1px solid var(--line); border-radius:11px;
@@ -43,26 +52,21 @@ main{flex:1; overflow-y:auto; padding:16px; display:flex; flex-direction:column;
 }
 .eg:active{border-color:var(--muted)}
 
-/* ---- today's entries ---- */
-.today{background:var(--surface); border:1px solid var(--line); border-radius:var(--radius); padding:6px 4px}
-.today h3{margin:6px 10px 4px; font-size:11px; color:var(--faint); font-weight:600; letter-spacing:.06em; text-transform:uppercase}
-.ent{display:flex; align-items:center; gap:10px; padding:7px 10px; font-variant-numeric:tabular-nums}
+/* ---------- entries ---------- */
+.ent{display:flex; align-items:center; gap:10px; padding:7px 2px; font-variant-numeric:tabular-nums}
 .ent .n{flex:1; overflow:hidden; text-overflow:ellipsis; white-space:nowrap}
 .ent .k{color:var(--muted); font-size:13px}
-.ent .x{
-  background:none; border:0; color:var(--faint); font-size:17px; line-height:1;
-  padding:2px 4px; cursor:pointer; flex:0 0 auto;
-}
+.ent .x{background:none; border:0; color:var(--faint); font-size:17px; line-height:1; padding:2px 5px; cursor:pointer}
 .ent .x:active{color:var(--danger)}
 
+/* ---------- chat ---------- */
 .msg{max-width:88%; padding:10px 13px; border-radius:var(--radius); white-space:pre-wrap; word-wrap:break-word}
 .me{align-self:flex-end; background:#243043; border-bottom-right-radius:4px}
 .bot{align-self:flex-start; background:var(--surface); border-bottom-left-radius:4px}
 .tools{align-self:flex-start; color:var(--faint); font-size:12px; font-family:ui-monospace,monospace}
 .err{align-self:flex-start; color:var(--danger); font-size:13px}
 
-.card{background:var(--surface); border:1px solid var(--line); border-radius:var(--radius); padding:14px}
-.card h3{margin:0 0 10px; font-size:11px; color:var(--faint); font-weight:600; letter-spacing:.06em; text-transform:uppercase}
+/* ---------- proposal ---------- */
 .row{display:flex; justify-content:space-between; gap:12px; padding:5px 0; font-variant-numeric:tabular-nums}
 .row span:last-child{color:var(--muted); white-space:nowrap; font-size:13px}
 .tot{border-top:1px solid var(--line); margin-top:8px; padding-top:10px; font-weight:600}
@@ -75,7 +79,44 @@ button.b{
 button.go{background:var(--accent); color:#0e1012; border-color:var(--accent)}
 button.b:disabled{opacity:.4}
 
-footer{padding:10px 12px calc(10px + env(safe-area-inset-bottom)); border-top:1px solid var(--line); display:flex; gap:8px; background:var(--bg)}
+/* ---------- charts ---------- */
+svg{display:block; width:100%; height:auto; overflow:visible}
+.bar{cursor:pointer}
+.bar rect.hit{fill:transparent}
+.axis{font-size:10px; fill:var(--faint)}
+.axis.on{fill:var(--text)}
+.vlabel{font-size:10.5px; fill:var(--muted); font-variant-numeric:tabular-nums}
+.gridline{stroke:var(--line); stroke-width:1}
+.avgline{stroke:var(--faint); stroke-width:1; stroke-dasharray:3 3}
+
+.legend{display:flex; flex-wrap:wrap; gap:14px; margin-top:11px}
+.legend div{display:flex; align-items:center; gap:6px; font-size:12.5px; color:var(--muted)}
+.legend i{width:9px; height:9px; border-radius:2px; display:block}
+
+.stack{display:flex; gap:2px; height:26px; border-radius:5px; overflow:hidden; margin-top:2px}
+.stack span{display:block}
+
+.hero{display:flex; gap:22px; flex-wrap:wrap}
+.hero div{min-width:74px}
+.hero b{display:block; font-size:24px; font-variant-numeric:tabular-nums; line-height:1.2}
+.hero small{color:var(--faint); font-size:11.5px; text-transform:uppercase; letter-spacing:.05em}
+
+.frow{display:flex; align-items:center; gap:10px; padding:5px 0; font-size:14px}
+.frow .fn{width:38%; overflow:hidden; text-overflow:ellipsis; white-space:nowrap}
+.frow .fb{flex:1; height:8px; background:var(--raised); border-radius:4px; overflow:hidden}
+.frow .fb i{display:block; height:100%; background:var(--accent); border-radius:4px}
+.frow .fc{color:var(--muted); font-size:12.5px; font-variant-numeric:tabular-nums; width:52px; text-align:right}
+
+/* ---------- insight cards ---------- */
+.ins{border-left:3px solid var(--line); padding:2px 0 2px 12px; margin-bottom:14px}
+.ins.up{border-color:var(--fat)}
+.ins.down{border-color:var(--carbs)}
+.ins.note{border-color:var(--faint)}
+.ins h4{font-size:11px; color:var(--faint); font-weight:600; letter-spacing:.06em; text-transform:uppercase; margin-bottom:3px}
+.ins p{margin:0; font-size:14.5px}
+
+/* ---------- chrome ---------- */
+footer{padding:10px 12px; border-top:1px solid var(--line); display:flex; gap:8px; background:var(--bg); flex:0 0 auto}
 input{
   flex:1; padding:12px 14px; border-radius:12px; border:1px solid var(--line);
   background:var(--surface); color:var(--text); font-size:16px; font-family:inherit;
@@ -83,6 +124,15 @@ input{
 input::placeholder{color:var(--faint)}
 input:focus{outline:none; border-color:var(--muted)}
 #send{flex:0 0 auto; padding:11px 17px; font-size:17px}
+nav{
+  display:flex; border-top:1px solid var(--line); background:var(--bg); flex:0 0 auto;
+  padding-bottom:env(safe-area-inset-bottom);
+}
+nav button{
+  flex:1; padding:11px 4px 12px; background:none; border:0; cursor:pointer;
+  color:var(--faint); font:inherit; font-size:12px; border-top:2px solid transparent; margin-top:-1px;
+}
+nav button.on{color:var(--text); border-top-color:var(--accent)}
 .gate{margin:auto; text-align:center; padding:24px; max-width:300px}
 </style>
 </head>
@@ -91,130 +141,111 @@ input:focus{outline:none; border-color:var(--muted)}
   <b id="kcal">0</b><span class="u">kcal today</span>
   <span class="sp" id="protein"></span>
 </header>
-<main id="feed"></main>
-<footer>
+
+<main id="view"></main>
+
+<footer id="bar">
   <input id="say" placeholder="what did you eat?" autocomplete="off" enterkeyhint="send">
   <button class="b" id="send">→</button>
 </footer>
 
+<nav>
+  <button data-tab="log" class="on">Log</button>
+  <button data-tab="week">Week</button>
+  <button data-tab="stats">Stats</button>
+  <button data-tab="insights">Insights</button>
+</nav>
+
 <script type="module">
 const $ = (id) => document.getElementById(id)
-const feed = $('feed')
+const view = $('view')
+let tab = 'log'
 let history = []
+let chat = []            // rendered chat nodes, kept across tab switches
 let pass = localStorage.getItem('passcode') || ''
 
 const headers = () => ({ 'content-type': 'application/json', 'x-passcode': pass })
-const el = (cls, html) => { const d = document.createElement('div'); d.className = cls; d.innerHTML = html; return d }
-const esc = (s) => String(s).replace(/[<>&]/g, (c) => ({ '<': '&lt;', '>': '&gt;', '&': '&amp;' }[c]))
-
-function bubble(cls, text) {
-  const d = document.createElement('div')
-  d.className = cls
-  d.textContent = text
-  feed.appendChild(d)
-  feed.scrollTop = feed.scrollHeight
-  return d
+const esc = (s) => String(s).replace(/[<>&"]/g, (c) => ({ '<': '&lt;', '>': '&gt;', '&': '&amp;', '"': '&quot;' }[c]))
+const el = (cls, html) => { const d = document.createElement('div'); d.className = cls; if (html != null) d.innerHTML = html; return d }
+const api = async (path, opts) => {
+  const r = await fetch(path, { headers: headers(), ...opts })
+  if (r.status === 401) { gate('wrong passcode'); throw new Error('unauthorized') }
+  return r.json()
 }
+
+/* ============================================================ LOG ======= */
 
 const EXAMPLES = ['2 dosa and sambar', 'a bowl of curd rice', '2 eggs and 2 chapati']
 
-// Shown when there is nothing to look at yet. An empty screen with a number on
-// it tells you nothing - this says what the app is and gives you a first move.
+function bubble(cls, text) {
+  const d = el(cls); d.textContent = text
+  chat.push(d)
+  if (tab === 'log') { view.appendChild(d); view.scrollTop = view.scrollHeight }
+  return d
+}
+
 function intro() {
   const box = el('intro', `
     <h1>What did you eat?</h1>
     <p>Type it however you'd say it. I work out the calories, you confirm, it's logged.</p>
-    <small>try</small>` + EXAMPLES.map((e) => `<button class="eg">${esc(e)}</button>`).join(''))
+    <div class="lbl">try</div>` + EXAMPLES.map((e) => `<button class="eg">${esc(e)}</button>`).join(''))
   box.querySelectorAll('.eg').forEach((b) => (b.onclick = () => { $('say').value = b.textContent; send() }))
   return box
 }
 
 function todayPanel(rows) {
-  const box = el('today', '<h3>today</h3>' + rows.map((r) => `
+  const box = el('sect', '<h3>today</h3>' + (rows.length ? rows.map((r) => `
     <div class="ent" data-id="${r.id}">
       <span class="n">${r.qty} × ${esc(r.name)}</span>
       <span class="k">${r.kcal} kcal</span>
       <button class="x" title="remove">×</button>
-    </div>`).join(''))
+    </div>`).join('') : '<p class="hint">Nothing logged yet today.</p>'))
   box.querySelectorAll('.ent').forEach((row) => {
     row.querySelector('.x').onclick = async () => {
       row.style.opacity = .4
-      const res = await fetch(`/api/entry?id=${row.dataset.id}`, { method: 'DELETE', headers: headers() })
-      if (res.ok) refreshDay(); else row.style.opacity = 1
+      const out = await api(`/api/entry?id=${row.dataset.id}`, { method: 'DELETE' })
+      out.deleted ? render() : (row.style.opacity = 1)
     }
   })
   return box
 }
 
-// The top of the feed always reflects the stored day; chat appends below it.
-async function refreshDay() {
-  try {
-    const r = await fetch('/api/day', { headers: headers() })
-    if (r.status === 401) return gate()
-    const d = await r.json()
-    $('kcal').textContent = d.totals.kcal || 0
-    $('protein').textContent = d.totals.protein_g ? `${d.totals.protein_g}g protein` : ''
-
-    feed.querySelector('.today')?.remove()
-    feed.querySelector('.intro')?.remove()
-    if (d.rows.length) feed.prepend(todayPanel(d.rows))
-    else if (!feed.children.length) feed.appendChild(intro())
-  } catch {
-    // The day failing to load must never leave a blank screen with a zero on
-    // it - that looks identical to a broken app and tells you nothing.
-    if (!feed.children.length) {
-      feed.appendChild(intro())
-      bubble('err', "Couldn't reach the server - is it still running?")
-    }
-  }
-}
-
-function gate(message) {
-  document.body.innerHTML = `<div class="gate"><h2>health agent</h2>
-    <p style="color:#8b9199;font-size:14px">${message || 'enter the passcode'}</p>
-    <input id="p" type="password" style="width:100%;margin:8px 0" enterkeyhint="go">
-    <button class="b go" id="ok" style="width:100%">unlock</button></div>`
-  const go = () => { localStorage.setItem('passcode', $('p').value.trim()); location.reload() }
-  $('ok').onclick = go
-  $('p').onkeydown = (e) => e.key === 'Enter' && go()
-  $('p').focus()
-}
-
-// The confirm gate, in the UI. Nothing is written until "log it" is pressed,
-// and it sends only names and quantities - the server recomputes every number.
+// The confirm gate. Nothing is written until "log it"; it sends only names and
+// quantities, and the server recomputes every number from the food table.
 function proposalCard(p) {
-  const box = el('card',
+  const box = el('sect',
     `<h3>${p.date}</h3>` +
     p.rows.map((r) => `<div class="row"><span>${r.qty} × ${esc(r.name)}</span><span>${r.grams}g · ${r.kcal} kcal</span></div>`).join('') +
     `<div class="row tot"><span>total</span><span>${p.totals.kcal} kcal · ${p.totals.protein_g}g protein</span></div>` +
-    `<div class="acts"><button class="b" id="no">cancel</button><button class="b go" id="yes">log it</button></div>`)
-  feed.appendChild(box)
-  feed.scrollTop = feed.scrollHeight
+    `<div class="acts"><button class="b" data-a="no">cancel</button><button class="b go" data-a="yes">log it</button></div>`)
 
-  box.querySelector('#no').onclick = () => {
+  box.querySelector('[data-a=no]').onclick = () => {
     box.querySelector('.acts').remove()
     bubble('tools', 'not logged')
     history.push({ role: 'user', text: '(I cancelled that - do not log it)' })
   }
-  box.querySelector('#yes').onclick = async () => {
+  box.querySelector('[data-a=yes]').onclick = async () => {
     box.querySelectorAll('button').forEach((b) => (b.disabled = true))
     const items = p.rows.map((r) => ({ name: r.name, qty: r.qty }))
-    const res = await fetch('/api/commit', { method: 'POST', headers: headers(), body: JSON.stringify({ date: p.date, items }) })
-    const out = await res.json()
-    box.querySelector('.acts').remove()
+    const out = await api('/api/commit', { method: 'POST', body: JSON.stringify({ date: p.date, items }) })
+    box.querySelector('.acts')?.remove()
     if (out.written) {
       bubble('tools', `logged · ${out.totals.kcal} kcal`)
       history.push({ role: 'user', text: '(confirmed and logged)' })
-      refreshDay()
+      cache.range = null
+      render()
     } else bubble('err', out.error || 'could not save')
   }
+  chat.push(box)
+  if (tab === 'log') { view.appendChild(box); view.scrollTop = view.scrollHeight }
 }
 
 async function send() {
   const text = $('say').value.trim()
   if (!text) return
   $('say').value = ''
-  feed.querySelector('.intro')?.remove()
+  if (tab !== 'log') switchTab('log')
+  view.querySelector('.intro')?.remove()
   bubble('msg me', text)
   history.push({ role: 'user', text })
 
@@ -223,7 +254,7 @@ async function send() {
     const res = await fetch('/api/chat', { method: 'POST', headers: headers(), body: JSON.stringify({ messages: history }) })
     if (res.status === 401) return gate('wrong passcode')
     const out = await res.json()
-    thinking.remove()
+    thinking.remove(); chat.splice(chat.indexOf(thinking), 1)
 
     // A rate-limited turn can still carry a finished proposal - show it, so a
     // 429 never costs you the meal you just typed.
@@ -237,26 +268,218 @@ async function send() {
     if (out.reply) bubble('msg bot', out.reply)
     if (out.proposal) proposalCard(out.proposal)
   } catch {
-    thinking.remove()
+    thinking.remove(); chat.splice(chat.indexOf(thinking), 1)
     bubble('err', 'network problem')
   }
 }
 
+/* =========================================================== CHARTS ===== */
+
+const DOW = ['S', 'M', 'T', 'W', 'T', 'F', 'S']
+const dowOf = (iso) => { const [y, m, d] = iso.split('-').map(Number); return DOW[new Date(y, m - 1, d).getDay()] }
+const dayNum = (iso) => Number(iso.slice(8))
+
+// Vertical bars, one series, so no legend - the section title names it.
+// Tapping a bar selects that day rather than relying on hover, which does not
+// exist on a phone.
+function weekChart(days, avg, onPick, picked) {
+  const W = 320, H = 150, PAD_B = 22, PAD_T = 14
+  const max = Math.max(...days.map((d) => d.kcal), avg, 1)
+  const scale = (v) => (H - PAD_B - PAD_T) * (v / max)
+  const bw = W / days.length
+  const inner = bw - 6 // 2px+ of surface between adjacent bars
+
+  const bars = days.map((d, i) => {
+    const h = scale(d.kcal)
+    const x = i * bw + 3
+    const y = H - PAD_B - h
+    const on = d.date === picked
+    return `<g class="bar" data-date="${d.date}">
+      <rect class="hit" x="${i * bw}" y="0" width="${bw}" height="${H}"></rect>
+      ${d.kcal ? `<rect x="${x}" y="${y}" width="${inner}" height="${h}" rx="4"
+          fill="${on ? 'var(--accent)' : 'var(--fat)'}"></rect>`
+        : `<rect x="${x}" y="${H - PAD_B - 3}" width="${inner}" height="3" rx="1.5" fill="var(--line)"></rect>`}
+      <text class="axis ${on ? 'on' : ''}" x="${x + inner / 2}" y="${H - 8}" text-anchor="middle">${dowOf(d.date)}</text>
+      ${on && d.kcal ? `<text class="vlabel" x="${x + inner / 2}" y="${y - 5}" text-anchor="middle">${d.kcal}</text>` : ''}
+    </g>`
+  }).join('')
+
+  const ay = H - PAD_B - scale(avg)
+  return `<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="Calories per day">
+    <line class="gridline" x1="0" y1="${H - PAD_B}" x2="${W}" y2="${H - PAD_B}"></line>
+    ${avg ? `<line class="avgline" x1="0" y1="${ay}" x2="${W}" y2="${ay}"></line>` : ''}
+    ${bars}
+  </svg>`
+}
+
+// Macros as a share of energy: protein and carbs 4 kcal/g, fat 9.
+function macroStack(t) {
+  const parts = [
+    { k: 'protein', label: 'protein', kcal: (t.protein_g || 0) * 4, v: t.protein_g },
+    { k: 'carbs', label: 'carbs', kcal: (t.carbs_g || 0) * 4, v: t.carbs_g },
+    { k: 'fat', label: 'fat', kcal: (t.fat_g || 0) * 9, v: t.fat_g },
+  ]
+  const sum = parts.reduce((a, p) => a + p.kcal, 0)
+  if (!sum) return '<p class="hint">No macros recorded yet.</p>'
+  return `<div class="stack">` +
+    parts.map((p) => `<span style="flex:${p.kcal};background:var(--${p.k})"></span>`).join('') +
+    `</div><div class="legend">` +
+    parts.map((p) => `<div><i style="background:var(--${p.k})"></i>${p.label} ${p.v}g · ${Math.round(p.kcal / sum * 100)}%</div>`).join('') +
+    `</div>`
+}
+
+/* ============================================================ VIEWS ===== */
+
+const cache = { day: null, range: null, insights: null }
+let pickedDay = null
+
+async function loadDay() { return (cache.day ??= await api('/api/day')) }
+async function loadRange(days = 7) {
+  if (cache.range?.n !== days) cache.range = { n: days, p: api(`/api/range?days=${days}`) }
+  return cache.range.p
+}
+
+async function viewLog() {
+  const d = await loadDay()
+  view.innerHTML = ''
+  view.appendChild(todayPanel(d.rows))
+  if (!chat.length && !d.rows.length) view.appendChild(intro())
+  chat.forEach((n) => view.appendChild(n))
+  view.scrollTop = view.scrollHeight
+}
+
+async function viewWeek() {
+  const r = await loadRange(7)
+  view.innerHTML = ''
+  if (!r.daysLogged) return view.appendChild(el('sect', '<h3>this week</h3><p class="hint">Nothing logged in the last 7 days. Log a meal and this fills in.</p>'))
+
+  pickedDay ??= r.days[r.days.length - 1].date
+  // The average rides in the heading, not on the plot: as a floating label it
+  // collided with the selected day's value.
+  const chart = el('sect', `<h3>calories · last 7 days · avg ${Math.round(r.averages.kcal)} (dashed)</h3>${weekChart(r.days, r.averages.kcal, null, pickedDay)}`)
+  chart.querySelectorAll('.bar').forEach((g) => (g.onclick = () => { pickedDay = g.dataset.date; viewWeek() }))
+  view.appendChild(chart)
+
+  const sel = r.days.find((d) => d.date === pickedDay) ?? r.days.at(-1)
+  view.appendChild(el('sect',
+    `<h3>${sel.date}</h3>` +
+    (sel.items.length
+      ? sel.items.map((i) => `<div class="ent"><span class="n">${i.qty} × ${esc(i.name)}</span><span class="k">${i.kcal} kcal</span></div>`).join('') +
+        `<div class="row tot"><span>total</span><span>${sel.kcal} kcal · ${sel.protein_g}g protein</span></div>` +
+        macroStack(sel)
+      : '<p class="hint">Nothing logged this day.</p>')))
+}
+
+async function viewStats() {
+  const r = await loadRange(30)
+  view.innerHTML = ''
+  if (!r.daysLogged) return view.appendChild(el('sect', '<h3>stats</h3><p class="hint">Nothing to summarise yet.</p>'))
+
+  const a = r.averages
+  view.appendChild(el('sect', `<h3>daily average · ${r.daysLogged} days logged</h3>
+    <div class="hero">
+      <div><b>${a.kcal}</b><small>kcal</small></div>
+      <div><b>${a.protein_g}</b><small>protein g</small></div>
+      <div><b>${a.carbs_g}</b><small>carbs g</small></div>
+      <div><b>${a.fat_g}</b><small>fat g</small></div>
+      <div><b>${a.sugar_g}</b><small>sugar g</small></div>
+    </div>`))
+
+  view.appendChild(el('sect', `<h3>where the energy comes from</h3>${macroStack(a)}`))
+
+  const max = Math.max(...r.topFoods.map((f) => f.times), 1)
+  view.appendChild(el('sect', `<h3>most eaten · last 30 days</h3>` +
+    r.topFoods.map((f) => `<div class="frow">
+      <span class="fn">${esc(f.name)}</span>
+      <span class="fb"><i style="width:${f.times / max * 100}%"></i></span>
+      <span class="fc">${f.times}×</span>
+    </div>`).join('')))
+}
+
+async function viewInsights() {
+  view.innerHTML = ''
+  const box = el('sect', `<h3>insights · last 14 days</h3>
+    <p class="hint">A separate pass over your history. It reads the whole log at once and tells you what to change.</p>
+    <div class="acts"><button class="b go" id="gen">read my log</button></div>`)
+  view.appendChild(box)
+
+  if (cache.insights) return paintInsights(cache.insights)
+  box.querySelector('#gen').onclick = async () => {
+    const btn = box.querySelector('#gen')
+    btn.disabled = true; btn.textContent = 'reading…'
+    try {
+      const out = await api('/api/insights?days=14')
+      cache.insights = out
+      paintInsights(out)
+    } catch {
+      btn.disabled = false; btn.textContent = 'read my log'
+    }
+  }
+}
+
+function paintInsights(out) {
+  view.querySelector('.acts')?.remove()
+  if (out.empty || out.error) return view.appendChild(el('sect', `<p class="hint">${esc(out.message || out.error)}</p>`))
+  view.appendChild(el('sect',
+    `<div class="ins"><h4>pattern</h4><p>${esc(out.pattern)}</p></div>` +
+    `<div class="ins up"><h4>increase</h4><p>${esc(out.increase)}</p></div>` +
+    `<div class="ins down"><h4>reduce</h4><p>${esc(out.reduce)}</p></div>` +
+    `<div class="ins note"><h4>note</h4><p>${esc(out.note)}</p></div>`))
+}
+
+/* =========================================================== CHROME ===== */
+
+const VIEWS = { log: viewLog, week: viewWeek, stats: viewStats, insights: viewInsights }
+
+async function render() {
+  cache.day = null
+  if (tab !== 'log') cache.range = null
+  try {
+    const d = await loadDay()
+    $('kcal').textContent = d.totals.kcal || 0
+    $('protein').textContent = d.totals.protein_g ? `${d.totals.protein_g}g protein` : ''
+    await VIEWS[tab]()
+  } catch {
+    // Never leave a blank screen with a zero on it - that is indistinguishable
+    // from a broken app and tells you nothing.
+    view.innerHTML = ''
+    view.appendChild(el('sect', '<p class="hint">Couldn\'t reach the server. Is it still running?</p>'))
+  }
+}
+
+function switchTab(name) {
+  tab = name
+  document.querySelectorAll('nav button').forEach((b) => b.classList.toggle('on', b.dataset.tab === name))
+  $('bar').style.display = name === 'log' ? 'flex' : 'none'
+  render()
+}
+document.querySelectorAll('nav button').forEach((b) => (b.onclick = () => switchTab(b.dataset.tab)))
+
+function gate(message) {
+  document.body.innerHTML = `<div class="gate"><h2>health agent</h2>
+    <p style="color:#8b9199;font-size:14px">${esc(message || 'enter the passcode')}</p>
+    <input id="p" type="password" style="width:100%;margin:8px 0" enterkeyhint="go">
+    <button class="b go" id="ok" style="width:100%">unlock</button></div>`
+  const go = () => { localStorage.setItem('passcode', $('p').value.trim()); location.reload() }
+  $('ok').onclick = go
+  $('p').onkeydown = (e) => e.key === 'Enter' && go()
+  $('p').focus()
+}
+
 $('send').onclick = send
 $('say').onkeydown = (e) => e.key === 'Enter' && send()
+render()
 
-// Focus on load so you can just type. Skipped on touch devices, where it
-// would throw the keyboard up over the screen before you have looked at it.
+// Focus on load so you can just type. Skipped on touch, where it would throw
+// the keyboard up before you have looked at anything.
 if (!matchMedia('(pointer:coarse)').matches) $('say').focus()
-refreshDay()
-// Only register in production. Service workers run on localhost too, which
-// means a cached shell can silently shadow every local edit - all cost, no
-// benefit while developing. Any registration left over from before is torn
-// down here so a stale worker cannot outlive this change.
+
+// Only register in production. Service workers run on localhost too, so a
+// cached shell would silently shadow every local edit - all cost, no benefit
+// while developing. Any leftover registration is torn down here.
 if ('serviceWorker' in navigator) {
-  if (location.protocol === 'https:') {
-    navigator.serviceWorker.register('/sw.js').catch(() => {})
-  } else {
+  if (location.protocol === 'https:') navigator.serviceWorker.register('/sw.js').catch(() => {})
+  else {
     navigator.serviceWorker.getRegistrations().then((rs) => rs.forEach((r) => r.unregister()))
     caches?.keys().then((ks) => ks.forEach((k) => caches.delete(k)))
   }

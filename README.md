@@ -8,9 +8,21 @@ Zero npm dependencies. Node 18+ for native fetch.
 ## run locally
 
     cp .env.example .env      # paste a Gemini key
-    npm run log               # terminal version
     npm run dev               # web app on localhost:3000
+    npm run log               # terminal version
     npm run smoke             # exercises the loop with NO api key
+    npm run seed              # demo data, so the charts have something in them
+    npm run reset             # wipe the food table and the log
+
+## the four views
+
+- **Log** - talk to the agent, confirm a proposal, see and delete today's entries
+- **Week** - calories per day with the average, tap a bar for that day's meals
+  and macro split
+- **Stats** - 30-day daily averages, where the energy comes from, most eaten
+- **Insights** - a separate pass that reads the whole log and says what to
+  change. Not a tool loop: two weeks of totals fit in one prompt, so a loop
+  would only add round trips on a rate-limited free tier.
 
 ## layout
 
