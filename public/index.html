@@ -342,8 +342,10 @@ async function loadRange(days = 7) {
 async function viewLog() {
   const d = await loadDay()
   view.innerHTML = ''
-  view.appendChild(todayPanel(d.rows))
-  if (!chat.length && !d.rows.length) view.appendChild(intro())
+  // An empty "today" card above the intro is just clutter on first open - show
+  // one or the other, never both.
+  if (d.rows.length) view.appendChild(todayPanel(d.rows))
+  else if (!chat.length) view.appendChild(intro())
   chat.forEach((n) => view.appendChild(n))
   view.scrollTop = view.scrollHeight
 }
