@@ -6,13 +6,15 @@ export default async function handler(req, res) {
   if (req.method !== 'POST') return send(res, 405, { error: 'POST only' })
   if (!authed(req)) return send(res, 401, { error: 'bad passcode' })
 
-  const { messages = [] } = await readBody(req)
+  const { messages = [], date } = await readBody(req)
+  const forDate = /^\d{4}-\d{2}-\d{2}$/.test(date ?? '') ? date : undefined
   const history = messages.slice(-40) // keep the context window bounded
 
   // The web confirm gate: log_meal cannot write. It parks a proposal, the loop
   // reports it, and the UI shows buttons. Committing is a separate request.
   let pending = null
   const tools = makeTools({
+    forDate,
     propose: async (proposal) => {
       pending = proposal
       return { status: 'awaiting_user_confirmation', shown_to_user: true }
@@ -22,7 +24,7 @@ export default async function handler(req, res) {
   try {
     const calls = []
     const reply = await runTurn({
-      history, tools,
+      history, tools, forDate,
       onToolCall: (c) => calls.push(c.name),
       stop: () => pending !== null,
     })

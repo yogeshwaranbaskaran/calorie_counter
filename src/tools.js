@@ -101,8 +101,10 @@ export const totals = (rows) => ({
 // Turns {name, qty} pairs into real rows by reading the table. Used by the
 // agent to PROPOSE and again at commit time to RECOMPUTE - the numbers are
 // never carried across the network and trusted.
-export async function buildProposal({ date, items = [] }) {
-  const day = date || localDate()
+export async function buildProposal({ date, items = [] }, fallbackDate) {
+  // Precedence: a date the model worked out from the sentence ("yesterday"),
+  // then the day the user has selected in the UI, then today.
+  const day = date || fallbackDate || localDate()
   const rows = []
   for (const item of items) {
     const food = await getFood(item.name)
@@ -123,7 +125,7 @@ export async function commitProposal({ date, items }) {
 
 // `propose` differs by front end: the CLI asks y/n inline, the web app hands
 // the proposal to the UI and waits for a button. The model cannot tell.
-export function makeTools({ propose }) {
+export function makeTools({ propose, forDate }) {
   return {
     async lookup_food({ names = [] }) {
       const hits = {}
@@ -151,7 +153,7 @@ export function makeTools({ propose }) {
     },
 
     async log_meal(args) {
-      const proposal = await buildProposal(args)
+      const proposal = await buildProposal(args, forDate)
       if (proposal.error) return proposal
       return propose(proposal)
     },

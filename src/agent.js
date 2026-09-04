@@ -11,15 +11,21 @@ const MAX_STEPS = 8 // a stuck model shouldn't be able to bill you forever
 // the latency of the common case. lookup_food stays for anything not listed.
 const MAX_INLINE_FOODS = 150
 
-export const systemPrompt = async () => {
+export const systemPrompt = async (forDate) => {
   const foods = Object.values(await getFoods())
   const known = foods.length && foods.length <= MAX_INLINE_FOODS
     ? `\n\nFoods you already know (per single unit) - use these directly, do NOT look them up:\n` +
       foods.map((f) => `- ${f.name}: 1 ${f.unit} = ${f.grams_per_unit}g, ${f.kcal} kcal, ${f.protein_g}g protein`).join('\n')
     : ''
 
+  const today = localDate()
+  const backfill = forDate && forDate !== today
+    ? `\n\nThe user is BACKFILLING an earlier day: ${forDate}. Log everything to
+that date unless they name a different one. Do not say it is in the past.`
+    : ''
+
   return `
-You are a food logging assistant. Today is ${localDate()}.
+You are a food logging assistant. Today is ${today}.${backfill}
 
 How to handle a meal the user describes:
 1. If every food is in the known list below, skip straight to step 5.
@@ -47,10 +53,10 @@ ${known}
 // log_meal parks a proposal the UI already renders the card, so asking the
 // model for a closing sentence costs an entire extra round trip - seconds, and
 // one of about five requests a minute - to say nothing the user needs.
-export async function runTurn({ history, tools, onToolCall, complete = llm, stop }) {
+export async function runTurn({ history, tools, onToolCall, complete = llm, stop, forDate }) {
   for (let step = 0; step < MAX_STEPS; step++) {
     const { text, calls, _raw } = await complete({
-      system: await systemPrompt(),
+      system: await systemPrompt(forDate),
       messages: history,
       tools: declarations,
       thinking: 'low',

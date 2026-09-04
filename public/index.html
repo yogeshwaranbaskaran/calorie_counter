@@ -32,6 +32,23 @@ header{
 header b{font-size:23px; font-variant-numeric:tabular-nums; line-height:1}
 header .u{color:var(--muted); font-size:13px}
 header .sp{margin-left:auto; color:var(--muted); font-size:13px; font-variant-numeric:tabular-nums}
+#daybar{
+  display:flex; align-items:center; gap:8px; padding:8px 16px; flex:0 0 auto;
+  border-bottom:1px solid var(--line); background:var(--bg);
+}
+#daybar button{
+  background:none; border:1px solid var(--line); color:var(--text); cursor:pointer;
+  border-radius:8px; width:30px; height:30px; font-size:17px; line-height:1; padding:0;
+}
+#daybar button:disabled{opacity:.3; cursor:default}
+#daybar input[type=date]{
+  flex:0 1 auto; width:auto; padding:5px 9px; font-size:14px; border-radius:8px;
+  border:1px solid var(--line); background:var(--surface); color:var(--text);
+  font-family:inherit; color-scheme:dark;
+}
+#daytag{font-size:12px; color:var(--faint); margin-left:auto}
+#daybar.past input[type=date]{border-color:var(--accent); color:var(--accent)}
+#daybar.past #daytag{color:var(--accent)}
 main{flex:1; overflow-y:auto; padding:16px; display:flex; flex-direction:column; gap:14px; min-height:0}
 
 .sect{background:var(--surface); border:1px solid var(--line); border-radius:var(--radius); padding:14px}
@@ -142,6 +159,13 @@ nav button.on{color:var(--text); border-top-color:var(--accent)}
   <span class="sp" id="protein"></span>
 </header>
 
+<div id="daybar">
+  <button id="prev" title="previous day">‹</button>
+  <input type="date" id="picker">
+  <button id="next" title="next day">›</button>
+  <span id="daytag"></span>
+</div>
+
 <main id="view"></main>
 
 <footer id="bar">
@@ -163,6 +187,19 @@ let tab = 'log'
 let history = []
 let chat = []            // rendered chat nodes, kept across tab switches
 let pass = localStorage.getItem('passcode') || ''
+
+// The selected day drives BOTH what you are looking at and what a new entry is
+// logged into, so backfilling old days needs no special mode.
+const isoToday = () => {
+  const d = new Date(), p = (n) => String(n).padStart(2, '0')
+  return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())}`
+}
+const shiftIso = (iso, by) => {
+  const [y, m, d] = iso.split('-').map(Number)
+  const t = new Date(y, m - 1, d + by), p = (n) => String(n).padStart(2, '0')
+  return `${t.getFullYear()}-${p(t.getMonth() + 1)}-${p(t.getDate())}`
+}
+let logDate = isoToday()
 
 const headers = () => ({ 'content-type': 'application/json', 'x-passcode': pass })
 const esc = (s) => String(s).replace(/[<>&"]/g, (c) => ({ '<': '&lt;', '>': '&gt;', '&': '&amp;', '"': '&quot;' }[c]))
@@ -194,7 +231,7 @@ function intro() {
 }
 
 function todayPanel(rows) {
-  const box = el('sect', '<h3>today</h3>' + (rows.length ? rows.map((r) => `
+  const box = el('sect', `<h3>${logDate === isoToday() ? 'today' : logDate}</h3>` + (rows.length ? rows.map((r) => `
     <div class="ent" data-id="${r.id}">
       <span class="n">${r.qty} × ${esc(r.name)}</span>
       <span class="k">${r.kcal} kcal</span>
@@ -251,7 +288,7 @@ async function send() {
 
   const thinking = bubble('tools', '…')
   try {
-    const res = await fetch('/api/chat', { method: 'POST', headers: headers(), body: JSON.stringify({ messages: history }) })
+    const res = await fetch('/api/chat', { method: 'POST', headers: headers(), body: JSON.stringify({ messages: history, date: logDate }) })
     if (res.status === 401) return gate('wrong passcode')
     const out = await res.json()
     thinking.remove(); chat.splice(chat.indexOf(thinking), 1)
@@ -333,7 +370,7 @@ function macroStack(t) {
 const cache = { day: null, range: null, insights: null }
 let pickedDay = null
 
-async function loadDay() { return (cache.day ??= await api('/api/day')) }
+async function loadDay() { return (cache.day ??= await api(`/api/day?date=${logDate}`)) }
 async function loadRange(days = 7) {
   if (cache.range?.n !== days) cache.range = { n: days, p: api(`/api/range?days=${days}`) }
   return cache.range.p
@@ -440,6 +477,8 @@ async function render() {
     const d = await loadDay()
     $('kcal').textContent = d.totals.kcal || 0
     $('protein').textContent = d.totals.protein_g ? `${d.totals.protein_g}g protein` : ''
+    document.querySelector('header .u').textContent =
+      logDate === isoToday() ? 'kcal today' : `kcal on ${logDate}`
     await VIEWS[tab]()
   } catch {
     // Never leave a blank screen with a zero on it - that is indistinguishable
@@ -469,6 +508,23 @@ function gate(message) {
   $('p').addEventListener('keydown', (e) => { if (e.key === 'Enter') go() })
   $('p').focus()
 }
+
+function setDay(iso) {
+  logDate = iso > isoToday() ? isoToday() : iso
+  $('picker').value = logDate
+  const past = logDate !== isoToday()
+  $('daybar').classList.toggle('past', past)
+  $('daytag').textContent = past ? 'backfilling' : ''
+  $('next').disabled = !past          // no logging into the future
+  chat = []                            // a new day starts a clean conversation
+  history = []
+  cache.day = null
+  render()
+}
+$('prev').onclick = () => setDay(shiftIso(logDate, -1))
+$('next').onclick = () => setDay(shiftIso(logDate, 1))
+$('picker').addEventListener('change', () => $('picker').value && setDay($('picker').value))
+setDay(logDate)
 
 $('send').onclick = send
 // MUST be addEventListener, not `onkeydown = ...`. An arrow body of
