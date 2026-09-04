@@ -83,6 +83,27 @@ main{flex:1; overflow-y:auto; padding:16px; display:flex; flex-direction:column;
 .tools{align-self:flex-start; color:var(--faint); font-size:12px; font-family:ui-monospace,monospace}
 .err{align-self:flex-start; color:var(--danger); font-size:13px}
 
+/* ---------- editable proposal ---------- */
+.prow{padding:9px 0; border-bottom:1px solid var(--line)}
+.prow:last-child{border-bottom:0}
+/* Name on its own line: at 390px there is no room for a name plus two inputs
+   plus a total, and truncating the food to "cream..." defeats the review. */
+.prow .pn{display:block; margin-bottom:6px; font-size:14.5px}
+.prow .pctl{display:flex; align-items:center; gap:6px}
+.prow input{
+  width:62px; flex:0 0 auto; padding:6px 8px; font-size:15px; text-align:right;
+  border-radius:8px; border:1px solid var(--line); background:var(--raised);
+  color:var(--text); font-family:inherit; font-variant-numeric:tabular-nums;
+}
+.prow input:focus{outline:none; border-color:var(--accent)}
+.prow .unit{color:var(--faint); font-size:11.5px; flex:0 0 auto}
+.prow .sub{color:var(--text); font-size:13.5px; margin-left:auto; flex:0 0 auto;
+  font-variant-numeric:tabular-nums}
+.prow .drop{background:none; border:0; color:var(--faint); font-size:18px; cursor:pointer;
+  padding:2px 2px 2px 8px; flex:0 0 auto}
+.prow .drop:active{color:var(--danger)}
+.edited{color:var(--accent); font-size:12px; margin-top:9px}
+
 /* ---------- proposal ---------- */
 .row{display:flex; justify-content:space-between; gap:12px; padding:5px 0; font-variant-numeric:tabular-nums}
 .row span:last-child{color:var(--muted); white-space:nowrap; font-size:13px}
@@ -250,29 +271,108 @@ function todayPanel(rows) {
 // The confirm gate. Nothing is written until "log it"; it sends only names and
 // quantities, and the server recomputes every number from the food table.
 function proposalCard(p) {
-  const box = el('sect',
-    `<h3>${p.date}</h3>` +
-    p.rows.map((r) => `<div class="row"><span>${r.qty} × ${esc(r.name)}</span><span>${r.grams}g · ${r.kcal} kcal</span></div>`).join('') +
-    `<div class="row tot"><span>total</span><span>${p.totals.kcal} kcal · ${p.totals.protein_g}g protein</span></div>` +
-    `<div class="acts"><button class="b" data-a="no">cancel</button><button class="b go" data-a="yes">log it</button></div>`)
+  // The review card is EDITABLE. Getting a quantity or a calorie wrong is the
+  // normal case, and re-explaining it in chat to fix a number is absurd.
+  // Everything recomputes locally as you type; the server recomputes again on
+  // commit, so the numbers are still not trusted from the client.
+  const rows = p.rows.map((r) => ({ ...r }))
+
+  const box = el('sect', `<h3>${p.date}</h3>
+    <div class="plist"></div>
+    <div class="row tot"><span>total</span><span class="grand"></span></div>
+    <div class="edited" hidden></div>
+    <div class="acts"><button class="b" data-a="no">cancel</button><button class="b go" data-a="yes">log it</button></div>`)
+
+  const list = box.querySelector('.plist')
+  const grand = box.querySelector('.grand')
+  const editedNote = box.querySelector('.edited')
+
+  const paint = () => {
+    const live = rows.filter((r) => !r.dropped)
+    const kcal = live.reduce((t, r) => t + Math.round(r.kcal_per_unit * r.qty / (r.basis || 1)), 0)
+    // Protein per unit, scaled by any calorie correction - the same
+    // proportional rule the server applies when it stores the edit.
+    const protein = Math.round(live.reduce((t, r) => {
+      const ratio = r.orig_kcal ? r.kcal_per_unit / r.orig_kcal : 1
+      return t + r.protein_per_unit * ratio * r.qty / (r.basis || 1)
+    }, 0) * 10) / 10
+    grand.textContent = `${kcal} kcal · ${protein}g protein`
+    box.querySelector('[data-a=yes]').disabled = live.length === 0
+
+    const changed = rows.filter((r) => !r.dropped && Math.abs(r.kcal_per_unit - r.orig_kcal) >= 0.5)
+    editedNote.hidden = !changed.length
+    if (changed.length) {
+      editedNote.textContent =
+        `saves the corrected value for ${changed.map((r) => r.name).join(', ')}`
+    }
+  }
+
+  rows.forEach((r, i) => {
+    r.orig_kcal = r.kcal_per_unit
+    r.protein_per_unit = r.qty ? (r.protein_g * (r.basis || 1)) / r.qty : 0
+    const line = el('prow', `
+      <span class="pn">${esc(r.name)}</span>
+      <div class="pctl">
+        <input class="q" type="number" inputmode="decimal" min="0" step="0.5" value="${r.qty}">
+        <span class="unit">${esc(r.unit)}</span>
+        <input class="k" type="number" inputmode="numeric" min="0" step="5" value="${Math.round(r.kcal_per_unit)}">
+        <span class="unit">kcal${r.basis > 1 ? '/100' + esc(r.unit) : ' each'}</span>
+        <span class="sub"></span>
+        <button class="drop" title="remove">×</button>
+      </div>`)
+
+    const sub = line.querySelector('.sub')
+    const redraw = () => {
+      sub.textContent = `${Math.round(r.kcal_per_unit * r.qty / (r.basis || 1))} kcal`
+      paint()
+    }
+
+    line.querySelector('.q').addEventListener('input', (e) => {
+      const v = parseFloat(e.target.value)
+      r.qty = Number.isFinite(v) && v >= 0 ? v : 0
+      redraw()
+    })
+    line.querySelector('.k').addEventListener('input', (e) => {
+      const v = parseFloat(e.target.value)
+      r.kcal_per_unit = Number.isFinite(v) && v >= 0 ? v : 0
+      redraw()
+    })
+    line.querySelector('.drop').onclick = () => {
+      r.dropped = true
+      line.remove()
+      paint()
+    }
+    list.appendChild(line)
+    redraw()
+  })
+  paint()
 
   box.querySelector('[data-a=no]').onclick = () => {
     box.querySelector('.acts').remove()
     bubble('tools', 'not logged')
     history.push({ role: 'user', text: '(I cancelled that - do not log it)' })
   }
+
   box.querySelector('[data-a=yes]').onclick = async () => {
     box.querySelectorAll('button').forEach((b) => (b.disabled = true))
-    const items = p.rows.map((r) => ({ name: r.name, qty: r.qty }))
+    const items = rows.filter((r) => !r.dropped && r.qty > 0)
+      .map((r) => ({ name: r.name, qty: r.qty, kcal_per_unit: r.kcal_per_unit }))
     const out = await api('/api/commit', { method: 'POST', body: JSON.stringify({ date: p.date, items }) })
     box.querySelector('.acts')?.remove()
     if (out.written) {
       bubble('tools', `logged · ${out.totals.kcal} kcal`)
-      history.push({ role: 'user', text: '(confirmed and logged)' })
+      // Tell the model what was actually logged, so it does not repeat the
+      // mistake later in the same conversation.
+      const edits = (out.corrected ?? []).map((c) => `${c.name} is ${c.to} kcal each, not ${c.from}`)
+      history.push({ role: 'user', text:
+        `(I corrected and logged: ${items.map((i) => `${i.qty} x ${i.name}`).join(', ')}` +
+        (edits.length ? `. Remember: ${edits.join('; ')}` : '') + ')' })
+      if (edits.length) bubble('tools', `learned · ${edits.join('; ')}`)
       cache.range = null
       render()
     } else bubble('err', out.error || 'could not save')
   }
+
   chat.push(box)
   if (tab === 'log') { view.appendChild(box); view.scrollTop = view.scrollHeight }
 }

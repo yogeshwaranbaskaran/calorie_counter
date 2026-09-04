@@ -76,19 +76,34 @@ export const declarations = [
 
 const round = (n) => Math.round(n * 10) / 10
 
+// Weights and volumes are stated PER 100 - the way every nutrition label does
+// it - so a stored value of 180 kcal for unit "g" means 180 per 100g. Anything
+// countable (piece, bowl, cup) is per one. Without this, "400g of chicken"
+// multiplies a per-100g figure by 400 and logs 72,000 kcal.
+const BASIS = { g: 100, ml: 100 }
+export const basisOf = (unit) => BASIS[String(unit).toLowerCase()] ?? 1
+
 // The model passes quantities. The MATH happens here, in plain JavaScript,
 // so totals are deterministic and cannot be hallucinated.
-const scale = (food, qty) => ({
-  name: food.name,
-  qty,
-  unit: food.unit,
-  grams: round(food.grams_per_unit * qty),
-  kcal: Math.round(food.kcal * qty),
-  protein_g: round(food.protein_g * qty),
-  carbs_g: round(food.carbs_g * qty),
-  fat_g: round(food.fat_g * qty),
-  sugar_g: round(food.sugar_g * qty),
-})
+const scale = (food, qty) => {
+  const basis = basisOf(food.unit)
+  const f = qty / basis
+  return {
+    name: food.name,
+    qty,
+    unit: food.unit,
+    // per-unit values and the basis ride along so the review card can edit
+    // them and recompute live, without a round trip
+    kcal_per_unit: food.kcal,
+    basis,
+    grams: round((basis === 1 ? food.grams_per_unit * qty : qty)),
+    kcal: Math.round(food.kcal * f),
+    protein_g: round(food.protein_g * f),
+    carbs_g: round(food.carbs_g * f),
+    fat_g: round(food.fat_g * f),
+    sugar_g: round(food.sugar_g * f),
+  }
+}
 
 export const totals = (rows) => ({
   kcal: rows.reduce((t, r) => t + r.kcal, 0),
@@ -116,11 +131,41 @@ export async function buildProposal({ date, items = [] }, fallbackDate) {
   return { date: day, rows, totals: totals(rows) }
 }
 
+// A per-unit calorie the user typed on the review card is a CORRECTION, not a
+// number to distrust. It overwrites the stored food, so the fix applies to
+// every future log of it - the mistake is corrected once, not every time.
+// Macros scale with the change, since we only know the ratio, not a new
+// breakdown.
+export async function applyCorrections(items = []) {
+  const corrected = []
+  for (const item of items) {
+    const edit = Number(item.kcal_per_unit)
+    if (!Number.isFinite(edit) || edit <= 0) continue
+    const food = await getFood(item.name)
+    if (!food || Math.abs(food.kcal - edit) < 0.5) continue
+
+    const ratio = edit / (food.kcal || edit)
+    await putFood({
+      ...food,
+      kcal: edit,
+      protein_g: round(food.protein_g * ratio),
+      carbs_g: round(food.carbs_g * ratio),
+      fat_g: round(food.fat_g * ratio),
+      sugar_g: round(food.sugar_g * ratio),
+    })
+    corrected.push({ name: food.name, from: food.kcal, to: edit })
+  }
+  return corrected
+}
+
 export async function commitProposal({ date, items }) {
+  const corrected = await applyCorrections(items)
+  // Rebuilt AFTER the corrections land, so totals reflect the edits and are
+  // still computed here rather than trusted from the client.
   const proposal = await buildProposal({ date, items })
   if (proposal.error) return proposal
   await appendLog(proposal.rows)
-  return { written: true, ...proposal }
+  return { written: true, corrected, ...proposal }
 }
 
 // `propose` differs by front end: the CLI asks y/n inline, the web app hands
