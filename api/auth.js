@@ -1,0 +1,90 @@
+// /api/auth/* - sign in with Google, session, plan and key management.
+import {
+  authConfigured, authUrl, exchangeCode, upsertUser, makeSession, cookieFor,
+  clearCookie, newState, currentUser, setPlan, decryptKey,
+} from '../src/auth.js'
+import { send, readBody } from '../src/http.js'
+
+const redirect = (res, to, cookie) => {
+  res.statusCode = 302
+  res.setHeader('location', to)
+  if (cookie) res.setHeader('set-cookie', cookie)
+  res.end()
+}
+
+export default async function handler(req, res) {
+  const url = new URL(req.url, 'http://x')
+  const action = url.pathname.replace('/api/auth', '').replace(/^\//, '') || 'me'
+
+  if (!authConfigured() && action !== 'me') {
+    return send(res, 501, { error: 'Google sign-in is not configured on this server' })
+  }
+
+  /* who am I - the page calls this on load to decide what to render */
+  if (action === 'me') {
+    if (!authConfigured()) return send(res, 200, { auth: false, single_user: true })
+    const user = await currentUser(req)
+    if (!user) return send(res, 200, { auth: true, signedIn: false })
+    return send(res, 200, {
+      auth: true, signedIn: true,
+      user: {
+        email: user.email, name: user.name, picture: user.picture,
+        plan: user.plan,
+        // Never return the key itself, only whether one is set.
+        hasKey: Boolean(decryptKey(user.gemini_key)),
+      },
+    })
+  }
+
+  /* start - bounce to Google, with a state cookie to tie the callback back */
+  if (action === 'start') {
+    const state = newState()
+    res.setHeader('set-cookie', `oauth_state=${state}; Path=/; HttpOnly; SameSite=Lax; Max-Age=600`)
+    return redirect(res, authUrl(req, state))
+  }
+
+  /* callback - Google sends the user back here with a code */
+  if (action === 'callback') {
+    const code = url.searchParams.get('code')
+    const state = url.searchParams.get('state')
+    const expected = (req.headers.cookie ?? '').split(';').map((c) => c.trim())
+      .find((c) => c.startsWith('oauth_state='))?.slice(12)
+    // Without this check another site could complete a sign-in on your behalf.
+    if (!code || !state || state !== expected) return redirect(res, '/?error=auth_state')
+
+    try {
+      const profile = await exchangeCode(req, code)
+      const user = await upsertUser(profile)
+      return redirect(res, '/', cookieFor(makeSession(user.id), req))
+    } catch (err) {
+      console.error('auth callback', err)
+      return redirect(res, '/?error=auth_failed')
+    }
+  }
+
+  if (action === 'logout') return redirect(res, '/', clearCookie(req))
+
+  /* plan - choose BYOK (free) or hosted (owner's key), and store the key */
+  if (action === 'plan') {
+    if (req.method !== 'POST') return send(res, 405, { error: 'POST only' })
+    const user = await currentUser(req)
+    if (!user) return send(res, 401, { error: 'not signed in' })
+
+    const { plan, gemini_key } = await readBody(req)
+    if (!['byok', 'hosted'].includes(plan)) return send(res, 400, { error: 'unknown plan' })
+
+    if (plan === 'byok') {
+      const key = String(gemini_key ?? '').trim()
+      // Keep an existing key when the field is left blank on a re-save.
+      if (!key && !decryptKey(user.gemini_key)) {
+        return send(res, 400, { error: 'Paste your Gemini API key to use the free plan.' })
+      }
+      await setPlan(user.id, 'byok', key || decryptKey(user.gemini_key))
+    } else {
+      await setPlan(user.id, 'hosted', null)
+    }
+    return send(res, 200, { ok: true, plan })
+  }
+
+  return send(res, 404, { error: 'unknown auth action' })
+}

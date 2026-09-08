@@ -1,5 +1,5 @@
 import { getLog, localDate } from '../src/store.js'
-import { send, authed } from '../src/http.js'
+import { send, requireUser } from '../src/http.js'
 
 const round = (n) => Math.round(n * 10) / 10
 const KEYS = ['kcal', 'protein_g', 'carbs_g', 'fat_g', 'sugar_g']
@@ -14,14 +14,15 @@ export function shiftDate(date, days) {
 // Everything the week and stats views need, computed once on the server so the
 // client stays a renderer rather than a second source of truth for the numbers.
 export default async function handler(req, res) {
-  if (!authed(req)) return send(res, 401, { error: 'bad passcode' })
+  const who = await requireUser(req, res)
+  if (!who) return
   const q = new URL(req.url, 'http://x').searchParams
   const to = q.get('to') || localDate()
   const span = Math.min(Number(q.get('days') || 7), 90)
   const from = q.get('from') || shiftDate(to, -(span - 1))
 
   try {
-    const rows = await getLog(from, to)
+    const rows = await getLog(who.userId, from, to)
 
     // Every day in the window, including the empty ones - a week chart with
     // missing bars reads as "no data" rather than "you ate nothing".

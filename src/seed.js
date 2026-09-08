@@ -36,7 +36,7 @@ const shift = (days) => {
 }
 
 const byName = Object.fromEntries(FOODS.map((f) => [f.name, f]))
-for (const f of FOODS) await putFood(f)
+for (const f of FOODS) await putFood(null, f)
 
 const rows = []
 DAYS.forEach((meals, i) => {
@@ -54,5 +54,5 @@ DAYS.forEach((meals, i) => {
     })
   }
 })
-await appendLog(rows)
+await appendLog(null, rows)
 console.log(`seeded ${FOODS.length} foods and ${rows.length} entries across ${DAYS.length} days`)

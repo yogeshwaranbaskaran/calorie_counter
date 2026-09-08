@@ -18,7 +18,7 @@ const propose = async ({ date, rows, totals }) => {
   )
   const answer = await rl.question(`\n  write this? ${dim('(y/n)')} `)
   if (!/^y/i.test(answer.trim())) return { written: false, reason: 'user_declined' }
-  await appendLog(rows)
+  await appendLog(null, rows)
   return { written: true, entries: rows.length, ...totals }
 }
 
@@ -26,7 +26,7 @@ const tools = makeTools({ propose })
 const history = []
 
 console.log(bold('\n  calorie counter'))
-console.log(dim(`  ${Object.keys(await getFoods()).length} foods known (${backend()}). ctrl-c to quit.\n`))
+console.log(dim(`  ${Object.keys(await getFoods(null)).length} foods known (${backend()}). ctrl-c to quit.\n`))
 
 while (true) {
   const said = (await rl.question(bold('> '))).trim()

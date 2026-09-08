@@ -63,6 +63,10 @@ export const _splitUrl = splitUrl // exported for tests only
 
 const q = async (text, params = []) => (await (await pool()).query(text, params)).rows
 
+// Other modules (auth) need the same pool rather than opening a second one.
+export const sql = q
+export const usingPostgres = () => remote
+
 // Postgres returns DATE as a JS Date in the server's timezone, which can shift
 // the calendar day. Selecting it as text keeps YYYY-MM-DD exactly as stored.
 const DAY = `to_char(date, 'YYYY-MM-DD') as date`
@@ -91,72 +95,80 @@ async function readJson(file, fallback) {
 const writeJson = (file, v) => writeFile(join(DATA, file), JSON.stringify(v, null, 2))
 
 /* ------------------------------------------------------------------ public */
+//
+// Every function takes the owning userId. `user_id is not distinct from $1`
+// matches NULL when the id is NULL and compares normally otherwise, so
+// single-user mode (no accounts configured, rows with user_id NULL) and
+// multi-user mode share one code path instead of two.
 
-export async function getFoods() {
+export async function getFoods(userId = null) {
   if (!remote) return readJson('foods.json', {})
-  const rows = await q('select * from foods')
+  const rows = await q('select * from foods where user_id is not distinct from $1', [userId])
   return Object.fromEntries(rows.map(num).map((r) => [r.name, r]))
 }
 
-export async function getFood(name) {
+export async function getFood(userId, name) {
   const key = normalize(name)
   if (!remote) return (await getFoods())[key] ?? null
-  const rows = await q('select * from foods where name = $1', [key])
+  const rows = await q(
+    'select * from foods where user_id is not distinct from $1 and name = $2', [userId, key])
   return rows[0] ? num(rows[0]) : null
 }
 
-export async function putFood(food) {
-  const row = { ...food, name: normalize(food.name), confirmed_at: new Date().toISOString() }
+export async function putFood(userId, food) {
+  const row = { ...food, name: normalize(food.name) }
   if (!remote) {
     const foods = await getFoods()
-    foods[row.name] = row
+    foods[row.name] = { ...row, confirmed_at: new Date().toISOString() }
     return writeJson('foods.json', foods)
   }
-  // Upsert, so re-confirming a food amends it in place rather than inserting a
-  // second conflicting row.
+  // Upsert on (user_id, name), so re-confirming amends in place and two users
+  // can each own a food called "dosa".
   await q(
-    `insert into foods (name, unit, grams_per_unit, kcal, protein_g, carbs_g, fat_g, sugar_g, confirmed_at)
-     values ($1,$2,$3,$4,$5,$6,$7,$8, now())
-     on conflict (name) do update set
+    `insert into foods (user_id, name, unit, grams_per_unit, kcal, protein_g, carbs_g, fat_g, sugar_g, confirmed_at)
+     values ($1,$2,$3,$4,$5,$6,$7,$8,$9, now())
+     on conflict (user_id, name) do update set
        unit = excluded.unit, grams_per_unit = excluded.grams_per_unit,
        kcal = excluded.kcal, protein_g = excluded.protein_g, carbs_g = excluded.carbs_g,
        fat_g = excluded.fat_g, sugar_g = excluded.sugar_g, confirmed_at = now()`,
-    [row.name, row.unit, row.grams_per_unit, row.kcal, row.protein_g, row.carbs_g, row.fat_g, row.sugar_g]
+    [userId, row.name, row.unit, row.grams_per_unit, row.kcal, row.protein_g, row.carbs_g, row.fat_g, row.sugar_g]
   )
 }
 
-export async function getLog(from, to) {
+export async function getLog(userId, from, to) {
   if (!remote) {
     const all = await readJson('log.json', [])
     return from ? all.filter((r) => r.date >= from && r.date <= to) : all
   }
+  const cols = `id, ${DAY}, name, qty, unit, grams, kcal, protein_g, carbs_g, fat_g, sugar_g`
   const rows = from
-    ? await q(`select id, ${DAY}, name, qty, unit, grams, kcal, protein_g, carbs_g, fat_g, sugar_g
-               from log_entries where date between $1 and $2 order by date, id`, [from, to])
-    : await q(`select id, ${DAY}, name, qty, unit, grams, kcal, protein_g, carbs_g, fat_g, sugar_g
-               from log_entries order by date, id`)
+    ? await q(`select ${cols} from log_entries
+               where user_id is not distinct from $1 and date between $2 and $3
+               order by date, id`, [userId, from, to])
+    : await q(`select ${cols} from log_entries
+               where user_id is not distinct from $1 order by date, id`, [userId])
   return rows.map(num)
 }
 
-export async function appendLog(entries) {
+export async function appendLog(userId, entries) {
   if (!remote) {
     const log = await readJson('log.json', [])
-    // Postgres gives rows a bigserial id; the JSON backend has to mint its own
-    // so the two behave identically to everything above this file.
+    // Postgres gives rows a bigserial id; the JSON backend mints its own so the
+    // two behave identically to everything above this file.
     let next = log.reduce((m, r) => Math.max(m, r.id ?? 0), 0)
     log.push(...entries.map((e) => ({ id: ++next, ...e })))
     return writeJson('log.json', log)
   }
   for (const e of entries) {
     await q(
-      `insert into log_entries (date, name, qty, unit, grams, kcal, protein_g, carbs_g, fat_g, sugar_g)
-       values ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10)`,
-      [e.date, e.name, e.qty, e.unit, e.grams, e.kcal, e.protein_g, e.carbs_g, e.fat_g, e.sugar_g]
+      `insert into log_entries (user_id, date, name, qty, unit, grams, kcal, protein_g, carbs_g, fat_g, sugar_g)
+       values ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11)`,
+      [userId, e.date, e.name, e.qty, e.unit, e.grams, e.kcal, e.protein_g, e.carbs_g, e.fat_g, e.sugar_g]
     )
   }
 }
 
-export async function deleteEntry(id) {
+export async function deleteEntry(userId, id) {
   if (!remote) {
     const log = await readJson('log.json', [])
     const kept = log.filter((r) => String(r.id) !== String(id))
@@ -164,7 +176,11 @@ export async function deleteEntry(id) {
     await writeJson('log.json', kept)
     return true
   }
-  const rows = await q('delete from log_entries where id = $1 returning id', [id])
+  // The user_id clause is what stops one account deleting another's entry by
+  // guessing an id.
+  const rows = await q(
+    'delete from log_entries where id = $1 and user_id is not distinct from $2 returning id',
+    [id, userId])
   return rows.length > 0
 }
 

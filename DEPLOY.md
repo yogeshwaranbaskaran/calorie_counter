@@ -121,3 +121,66 @@ or pay for the always-on tier. Nothing in the app can fix this.
   does not match `APP_PASSCODE`. Clear site data and re-enter it.
 - **429 from Gemini** — free tier. `gemini-3.5-flash-lite` has room;
   `gemini-3.6-flash` is capped at 20 requests **per day**.
+
+
+---
+
+# adding accounts (Google sign-in)
+
+Until these are set the app stays single-user behind `APP_PASSCODE`. Setting
+them turns on accounts, and every row is scoped to its owner.
+
+## 1. Google Cloud Console
+
+APIs & Services → **Credentials** → Create credentials → **OAuth client ID** →
+**Web application**. Authorised redirect URIs — add both:
+
+```
+http://localhost:3000/api/auth/callback
+https://calorie-counter-pedb.onrender.com/api/auth/callback
+```
+
+Then **OAuth consent screen → Publish**. Leaving it in Testing means only
+listed test users can sign in — the exact thing that blocked Smart Splitter.
+
+Keep the **Client ID** and **Client secret**.
+
+## 2. Migrate the live database FIRST
+
+Run `db/002_users.sql` in the Neon SQL Editor **before** deploying the new
+code, or the app will query columns that do not exist yet.
+
+It is safe on data: existing rows get `user_id NULL` and are adopted by
+`OWNER_EMAIL` the first time you sign in.
+
+## 3. Four more environment variables on Render
+
+| name | value |
+|---|---|
+| `GOOGLE_CLIENT_ID` | from step 1 |
+| `GOOGLE_CLIENT_SECRET` | from step 1 |
+| `SESSION_SECRET` | 32 random bytes — see below |
+| `OWNER_EMAIL` | your Google account email |
+
+```
+node -e "console.log(require('crypto').randomBytes(32).toString('base64url'))"
+```
+
+> `SESSION_SECRET` signs session cookies **and** encrypts users' stored Gemini
+> keys. Changing it later signs everyone out and makes stored keys unreadable —
+> they would each have to paste theirs again.
+
+## 4. Sign in
+
+Deploy, open the app, **Continue with Google**. Sign in with `OWNER_EMAIL`
+first: that account claims your existing history. Then pick a plan — you'll
+want **use my own key** with the key already in your `.env`.
+
+Anyone else who signs in starts empty, with their own food table.
+
+## what each plan means
+
+- **own key (free)** — they paste a Gemini key from AI Studio. Stored
+  encrypted, never shown back. Their quota, not yours.
+- **app's key (subscription)** — uses `GEMINI_API_KEY`. Works today and shows
+  a notice that payment is coming; it is not yet a hard stop.

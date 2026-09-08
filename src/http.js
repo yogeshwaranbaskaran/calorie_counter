@@ -5,12 +5,27 @@ export const send = (res, status, body) => {
   res.end(JSON.stringify(body))
 }
 
-// Single-user app on a public URL: without this, anyone who finds the URL can
-// spend your Gemini quota and read your food log. A passcode is proportionate.
+// Two modes. With Google sign-in configured, every request must carry a valid
+// session and each user sees only their own rows. Without it the app is
+// single-user: the shared passcode guards it and rows have user_id NULL.
+import { authConfigured, currentUser } from './auth.js'
+
 export function authed(req) {
   const expected = process.env.APP_PASSCODE
   if (!expected) return true // not configured => local dev
   return req.headers['x-passcode'] === expected
+}
+
+// Returns { ok, userId, user } - userId is null in single-user mode, which is
+// exactly what the store's `is not distinct from` comparison expects.
+export async function requireUser(req, res) {
+  if (!authConfigured()) {
+    if (!authed(req)) { send(res, 401, { error: 'bad passcode' }); return null }
+    return { userId: null, user: null }
+  }
+  const user = await currentUser(req)
+  if (!user) { send(res, 401, { error: 'not signed in', signin: '/api/auth/start' }); return null }
+  return { userId: user.id, user }
 }
 
 export async function readBody(req) {

@@ -22,7 +22,7 @@ Assume Indian home cooking. If there is too little data to say something
 honest, say so in NOTE rather than inventing a trend.
 `.trim()
 
-export async function getInsights(range) {
+export async function getInsights(range, apiKey) {
   const rows = range.days.map((d) =>
     `${d.date}: ${d.kcal} kcal, ${d.protein_g}g protein, ${d.carbs_g}g carbs, ` +
     `${d.fat_g}g fat, ${d.sugar_g}g sugar` +
@@ -35,7 +35,7 @@ export async function getInsights(range) {
     `${range.averages.protein_g}g protein, ${range.averages.carbs_g}g carbs, ` +
     `${range.averages.fat_g}g fat, ${range.averages.sugar_g}g sugar\n\n${rows}`
 
-  const { text } = await llm({ system: SYSTEM, messages: [{ role: 'user', text: summary }] })
+  const { text } = await llm({ system: SYSTEM, messages: [{ role: 'user', text: summary }], apiKey })
 
   const field = (label) =>
     text.match(new RegExp(`${label}:\\s*([\\s\\S]*?)(?=\\n[A-Z]+:|$)`))?.[1]?.trim() ?? ''

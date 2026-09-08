@@ -43,7 +43,7 @@ function reprice(entry, food, grams) {
 }
 
 const [cmd, ...args] = process.argv.slice(2)
-const foods = await getFoods()
+const foods = await getFoods(null)
 const log = await readLog()
 
 if (cmd === 'list') {
@@ -115,7 +115,7 @@ else if (cmd === 'setunit') {
     fat_g: round(food.fat_g * ratio),
     sugar_g: round(food.sugar_g * ratio),
   }
-  await putFood(updated)
+  await putFood(null, updated)
 
   let touched = 0
   const next = log.map((r) => {

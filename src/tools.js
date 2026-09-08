@@ -118,8 +118,8 @@ export const similarity = (a, b) => {
 //   icecream          / 120cals icecream    0.50  -> different (300 vs 120 kcal)
 const SAME = 0.85
 
-export async function findSimilar(name, foods) {
-  const all = foods ?? (await getFoods())
+export async function findSimilar(userId, name, foods) {
+  const all = foods ?? (await getFoods(userId))
   return Object.values(all)
     .map((f) => ({ food: f, score: similarity(name, f.name) }))
     .filter((x) => x.score >= SAME)
@@ -166,13 +166,13 @@ export const totals = (rows) => ({
 // Turns {name, qty} pairs into real rows by reading the table. Used by the
 // agent to PROPOSE and again at commit time to RECOMPUTE - the numbers are
 // never carried across the network and trusted.
-export async function buildProposal({ date, items = [] }, fallbackDate) {
+export async function buildProposal(userId, { date, items = [] }, fallbackDate) {
   // Precedence: a date the model worked out from the sentence ("yesterday"),
   // then the day the user has selected in the UI, then today.
   const day = date || fallbackDate || localDate()
   const rows = []
   for (const item of items) {
-    const food = await getFood(item.name)
+    const food = await getFood(userId, item.name)
     // A missing food is a hard stop, not a guess. This is what forces the
     // model to look up and save before anything can ever be written.
     if (!food) return { error: 'unknown_food', name: item.name }
@@ -186,16 +186,16 @@ export async function buildProposal({ date, items = [] }, fallbackDate) {
 // every future log of it - the mistake is corrected once, not every time.
 // Macros scale with the change, since we only know the ratio, not a new
 // breakdown.
-export async function applyCorrections(items = []) {
+export async function applyCorrections(userId, items = []) {
   const corrected = []
   for (const item of items) {
     const edit = Number(item.kcal_per_unit)
     if (!Number.isFinite(edit) || edit <= 0) continue
-    const food = await getFood(item.name)
+    const food = await getFood(userId, item.name)
     if (!food || Math.abs(food.kcal - edit) < 0.5) continue
 
     const ratio = edit / (food.kcal || edit)
-    await putFood({
+    await putFood(userId, {
       ...food,
       kcal: edit,
       protein_g: round(food.protein_g * ratio),
@@ -208,22 +208,22 @@ export async function applyCorrections(items = []) {
   return corrected
 }
 
-export async function commitProposal({ date, items }) {
-  const corrected = await applyCorrections(items)
+export async function commitProposal(userId, { date, items }) {
+  const corrected = await applyCorrections(userId, items)
   // Rebuilt AFTER the corrections land, so totals reflect the edits and are
   // still computed here rather than trusted from the client.
-  const proposal = await buildProposal({ date, items })
+  const proposal = await buildProposal(userId, { date, items })
   if (proposal.error) return proposal
-  await appendLog(proposal.rows)
+  await appendLog(userId, proposal.rows)
   return { written: true, corrected, ...proposal }
 }
 
 // `propose` differs by front end: the CLI asks y/n inline, the web app hands
 // the proposal to the UI and waits for a button. The model cannot tell.
-export function makeTools({ propose, forDate }) {
+export function makeTools({ propose, forDate, userId = null }) {
   return {
     async lookup_food({ names = [] }) {
-      const all = await getFoods()
+      const all = await getFoods(userId)
       const hits = {}
       const misses = []
       for (const raw of names) {
@@ -231,7 +231,7 @@ export function makeTools({ propose, forDate }) {
         if (exact) { hits[normalize(raw)] = exact; continue }
         // A near match is reported as a hit under the name already stored, so
         // the model logs against the existing food instead of making a twin.
-        const near = await findSimilar(raw, all)
+        const near = await findSimilar(userId, raw, all)
         if (near) hits[near.food.name] = { ...near.food, matched_your_text: raw }
         else misses.push(raw)
       }
@@ -239,8 +239,8 @@ export function makeTools({ propose, forDate }) {
     },
 
     async save_food(args) {
-      const all = await getFoods()
-      const near = all[normalize(args.name)] ? null : await findSimilar(args.name, all)
+      const all = await getFoods(userId)
+      const near = all[normalize(args.name)] ? null : await findSimilar(userId, args.name, all)
       if (near) {
         return {
           error: 'similar_food_already_exists',
@@ -250,7 +250,7 @@ export function makeTools({ propose, forDate }) {
             `(a different size or product), and then give it a clearly different name.`,
         }
       }
-      await putFood({
+      await putFood(userId, {
         name: args.name.trim(),
         unit: args.unit,
         grams_per_unit: args.grams_per_unit,
@@ -264,13 +264,13 @@ export function makeTools({ propose, forDate }) {
     },
 
     async log_meal(args) {
-      const proposal = await buildProposal(args, forDate)
+      const proposal = await buildProposal(userId, args, forDate)
       if (proposal.error) return proposal
       return propose(proposal)
     },
 
     async query_history({ from, to }) {
-      const rows = await getLog(from, to)
+      const rows = await getLog(userId, from, to)
       const byDay = {}
       for (const r of rows) {
         byDay[r.date] ??= { kcal: 0, protein_g: 0, sugar_g: 0, items: [] }

@@ -14,4 +14,12 @@ services:
       - key: DATABASE_URL
         sync: false          # Neon pooled connection string
       - key: APP_PASSCODE
-        sync: false          # without this the URL is open to anyone
+        sync: false          # only used when Google sign-in is not configured
+      - key: GOOGLE_CLIENT_ID
+        sync: false
+      - key: GOOGLE_CLIENT_SECRET
+        sync: false
+      - key: SESSION_SECRET
+        sync: false          # signs session cookies AND encrypts users' keys
+      - key: OWNER_EMAIL
+        sync: false          # this account adopts the pre-accounts data

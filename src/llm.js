@@ -40,13 +40,19 @@ function toGemini(messages) {
   })
 }
 
-export async function llm({ system, messages, tools, thinking }) {
+export async function llm({ system, messages, tools, thinking, apiKey }) {
   // gemini-3.6-flash is capped at TWENTY requests per DAY on the free tier,
   // which three meals plus an insights run would exhaust. flash-lite has real
   // headroom, answers in about a second, and handles this tool loop fine.
   const model = process.env.GEMINI_MODEL || 'gemini-3.5-flash-lite'
-  const key = process.env.GEMINI_API_KEY
-  if (!key) throw new Error('GEMINI_API_KEY is not set - copy .env.example to .env')
+  // A user on the free plan supplies their own key; the hosted plan falls back
+  // to the owner's.
+  const key = apiKey || process.env.GEMINI_API_KEY
+  if (!key) {
+    const e = new Error('no Gemini API key available')
+    e.code = 'no_key'
+    throw e
+  }
 
   const body = {
     contents: toGemini(messages),

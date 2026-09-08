@@ -199,13 +199,41 @@ nav button{
   color:var(--faint); font:inherit; font-size:12px; border-top:2px solid transparent; margin-top:-1px;
 }
 nav button.on{color:var(--text); border-top-color:var(--accent)}
-.gate{margin:auto; text-align:center; padding:24px; max-width:300px}
+.gate{margin:auto; padding:26px 22px; max-width:360px; width:100%}
+.gate h2{font-size:22px; margin-bottom:6px}
+.gate p{color:var(--muted); font-size:14px; margin:0 0 20px}
+.gate input{width:100%; margin:6px 0 2px}
+.gsi{
+  display:flex; align-items:center; justify-content:center; gap:10px; width:100%;
+  padding:12px; border-radius:11px; border:1px solid var(--line); background:#fff;
+  color:#1f1f1f; font:inherit; font-size:15px; font-weight:600; cursor:pointer; text-decoration:none;
+}
+.gsi svg{width:18px; height:18px}
+.plan{
+  border:1px solid var(--line); border-radius:12px; padding:14px; margin-bottom:10px;
+  cursor:pointer; background:var(--surface);
+}
+.plan.sel{border-color:var(--accent)}
+.plan h4{font-size:15px; margin-bottom:3px}
+.plan .tag{float:right; font-size:11px; color:var(--accent); text-transform:uppercase; letter-spacing:.05em}
+.plan p{font-size:13px; color:var(--muted); margin:0}
+.banner{
+  background:var(--raised); border:1px solid var(--line); border-left:3px solid var(--warn, #e0a35c);
+  border-radius:10px; padding:10px 12px; font-size:13px; color:var(--muted);
+}
+.banner b{color:var(--text)}
+.acct{
+  margin-left:auto; display:flex; align-items:center; gap:7px; background:none; border:0;
+  cursor:pointer; padding:2px; color:var(--muted); font:inherit; font-size:12px;
+}
+.acct img{width:26px; height:26px; border-radius:50%}
 </style>
 </head>
 <body>
 <header>
   <b id="kcal">0</b><span class="u">kcal today</span>
   <span class="sp" id="protein"></span>
+  <button class="acct" id="acct" hidden></button>
 </header>
 
 <div id="daybar">
@@ -251,6 +279,7 @@ const shiftIso = (iso, by) => {
 let logDate = isoToday()
 
 const headers = () => ({ 'content-type': 'application/json', 'x-passcode': pass })
+// Session is a cookie, so nothing extra is needed for signed-in requests.
 const esc = (s) => String(s).replace(/[<>&"]/g, (c) => ({ '<': '&lt;', '>': '&gt;', '&': '&amp;', '"': '&quot;' }[c]))
 // "250 x rice" reads as 250 servings. A weight belongs against its unit.
 // Display only. Stored names stay lowercase so lookups keep matching - this
@@ -268,6 +297,7 @@ const api = async (path, opts) => {
 /* ============================================================ LOG ======= */
 
 const EXAMPLES = ['2 dosa and sambar', 'a bowl of curd rice', '2 eggs and 2 chapati']
+const GOOGLE_SVG = `<svg viewBox="0 0 48 48"><path fill="#EA4335" d="M24 9.5c3.5 0 6.6 1.2 9 3.6l6.7-6.7C35.6 2.6 30.2 0 24 0 14.6 0 6.5 5.4 2.6 13.2l7.8 6.1C12.3 13.2 17.6 9.5 24 9.5z"/><path fill="#4285F4" d="M46.98 24.5c0-1.6-.15-3.2-.43-4.7H24v9h12.9c-.56 3-2.24 5.5-4.77 7.2l7.5 5.8c4.4-4 6.9-10 6.9-17.3z"/><path fill="#FBBC05" d="M10.4 28.7a14.5 14.5 0 010-9.4l-7.8-6.1a24 24 0 000 21.6l7.8-6.1z"/><path fill="#34A853" d="M24 48c6.5 0 11.9-2.1 15.9-5.8l-7.5-5.8c-2.1 1.4-4.8 2.2-8.4 2.2-6.4 0-11.7-3.7-13.6-9.8l-7.8 6.1C6.5 42.6 14.6 48 24 48z"/></svg>`
 
 function bubble(cls, text) {
   const d = el(cls); d.textContent = text
@@ -765,33 +795,107 @@ function switchTab(name) {
 }
 document.querySelectorAll('nav button').forEach((b) => (b.onclick = () => switchTab(b.dataset.tab)))
 
-function gate(message) {
-  document.body.innerHTML = `<div class="gate"><h2>Calorie Counter</h2>
-    <p style="color:#8b9199;font-size:14px">${esc(message || 'enter the passcode')}</p>
-    <input id="p" type="password" style="width:100%;margin:8px 0" enterkeyhint="go">
-    <button class="b go" id="ok" style="width:100%">unlock</button></div>`
+let me = null   // /api/auth/me: who is signed in, and on which plan
+
+const screen = (html) => {
+  document.body.innerHTML = `<div class="gate">${html}</div>`
+}
+
+function signInScreen(error) {
+  screen(`<h2>Calorie Counter</h2>
+    <p>Tell it what you ate. It works out the calories, you confirm, it's logged.</p>
+    ${error ? `<p class="err" style="margin-bottom:14px">${esc(error)}</p>` : ''}
+    <a class="gsi" href="/api/auth/start">${GOOGLE_SVG}Continue with Google</a>`)
+}
+
+// Shown once after signing in, and reachable later from the account button.
+function planScreen(user, note) {
+  screen(`<h2>Choose how you pay for the AI</h2>
+    <p>Every meal you log asks Gemini to work out the nutrition. That costs
+       someone an API call.</p>
+    ${note ? `<p class="err" style="margin-bottom:12px">${esc(note)}</p>` : ''}
+    <div class="plan ${user.plan === 'byok' ? 'sel' : ''}" data-plan="byok">
+      <span class="tag">free</span>
+      <h4>Use my own key</h4>
+      <p>Paste a free Gemini API key from Google AI Studio. Your quota, your
+         key, no charge — takes about five minutes to set up.</p>
+      <input id="gkey" type="password" placeholder="${user.hasKey ? 'key saved — paste a new one to replace' : 'AQ.… or AIzaSy…'}" autocomplete="off">
+    </div>
+    <div class="plan ${user.plan === 'hosted' ? 'sel' : ''}" data-plan="hosted">
+      <span class="tag">subscription</span>
+      <h4>Use the app's key</h4>
+      <p>Nothing to set up. This will need a paid subscription — for now it
+         works while that is being built.</p>
+    </div>
+    <button class="b go" id="savePlan" style="width:100%;margin-top:6px">continue</button>
+    <p style="margin-top:14px"><a href="/api/auth/logout" style="color:var(--faint);font-size:12.5px">sign out</a></p>`)
+
+  let chosen = user.plan || 'byok'
+  const paint = () => document.querySelectorAll('.plan')
+    .forEach((el) => el.classList.toggle('sel', el.dataset.plan === chosen))
+  document.querySelectorAll('.plan').forEach((el) => (el.onclick = () => { chosen = el.dataset.plan; paint() }))
+
+  document.getElementById('savePlan').onclick = async () => {
+    const btn = document.getElementById('savePlan')
+    btn.disabled = true
+    const body = { plan: chosen, gemini_key: document.getElementById('gkey')?.value.trim() }
+    const r = await fetch('/api/auth/plan', {
+      method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(body),
+    })
+    const out = await r.json()
+    if (out.ok) location.reload()
+    else { btn.disabled = false; planScreen(user, out.error) }
+  }
+}
+
+function accountButton() {
+  const b = $('acct')
+  if (!me?.signedIn) return
+  b.hidden = false
+  b.innerHTML = me.user.picture
+    ? `<img src="${esc(me.user.picture)}" alt="">`
+    : esc((me.user.name || me.user.email).split(' ')[0])
+  b.onclick = () => planScreen(me.user)
+}
+
+// Single-user mode (no Google configured) keeps the old shared passcode.
+function passcodeScreen(message) {
+  screen(`<h2>Calorie Counter</h2>
+    <p>${esc(message || 'enter the passcode')}</p>
+    <input id="p" type="password" enterkeyhint="go">
+    <button class="b go" id="ok" style="width:100%;margin-top:8px">unlock</button>`)
   const go = () => { localStorage.setItem('passcode', $('p').value.trim()); location.reload() }
   $('ok').onclick = go
   $('p').addEventListener('keydown', (e) => { if (e.key === 'Enter') go() })
   $('p').focus()
 }
 
-function setDay(iso) {
-  logDate = iso > isoToday() ? isoToday() : iso
-  $('picker').value = logDate
-  const past = logDate !== isoToday()
-  $('daybar').classList.toggle('past', past)
-  $('daytag').textContent = past ? `${dayName(logDate)} · backfilling` : dayName(logDate)
-  $('next').disabled = !past          // no logging into the future
-  chat = []                            // a new day starts a clean conversation
-  history = []
-  cache.day = null
-  render()
+const gate = (m) => (me?.auth ? signInScreen(m) : passcodeScreen(m))
+
+async function boot() {
+  const err = new URLSearchParams(location.search).get('error')
+  if (err) history.replaceState({}, '', '/')
+
+  try {
+    me = await (await fetch('/api/auth/me')).json()
+  } catch {
+    me = { auth: false, single_user: true }
+  }
+
+  if (me.auth && !me.signedIn) {
+    return signInScreen(err === 'auth_failed' ? 'Google sign-in failed. Try again.'
+      : err === 'auth_state' ? 'That sign-in link expired. Try again.' : null)
+  }
+  // A BYOK user with no key cannot log anything, so ask before showing the app.
+  if (me.signedIn && me.user.plan === 'byok' && !me.user.hasKey) return planScreen(me.user)
+
+  accountButton()
+  if (me.signedIn && me.user.plan === 'hosted') {
+    view.appendChild(el('banner',
+      `<b>You're on the app's key.</b> This will need a subscription once payments are live.`))
+  }
+  setDay(logDate)
 }
-$('prev').onclick = () => setDay(shiftIso(logDate, -1))
-$('next').onclick = () => setDay(shiftIso(logDate, 1))
-$('picker').addEventListener('change', () => $('picker').value && setDay($('picker').value))
-setDay(logDate)
 
 $('send').onclick = send
 // MUST be addEventListener, not `onkeydown = ...`. An arrow body of
@@ -801,7 +905,7 @@ $('send').onclick = send
 // silently swallowed everything typed into it. addEventListener ignores the
 // return value, so the default action survives.
 $('say').addEventListener('keydown', (e) => { if (e.key === 'Enter') send() })
-render()
+boot()
 
 // Focus on load so you can just type. Skipped on touch, where it would throw
 // the keyboard up before you have looked at anything.

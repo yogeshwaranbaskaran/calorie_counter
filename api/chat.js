@@ -1,10 +1,20 @@
 import { runTurn } from '../src/agent.js'
 import { makeTools } from '../src/tools.js'
-import { send, authed, readBody } from '../src/http.js'
+import { send, requireUser, readBody } from '../src/http.js'
+import { keyForUser } from '../src/auth.js'
 
 export default async function handler(req, res) {
   if (req.method !== 'POST') return send(res, 405, { error: 'POST only' })
-  if (!authed(req)) return send(res, 401, { error: 'bad passcode' })
+  const who = await requireUser(req, res)
+  if (!who) return
+
+  const { key, plan, missingKey, unpaid } = keyForUser(who.user)
+  if (missingKey) {
+    return send(res, 402, {
+      error: 'Add your own Gemini API key in settings, or switch to the hosted plan.',
+      code: 'no_key', needsKey: true,
+    })
+  }
 
   const { messages = [], date } = await readBody(req)
   const forDate = /^\d{4}-\d{2}-\d{2}$/.test(date ?? '') ? date : undefined
@@ -14,6 +24,7 @@ export default async function handler(req, res) {
   // reports it, and the UI shows buttons. Committing is a separate request.
   let pending = null
   const tools = makeTools({
+    userId: who.userId,
     forDate,
     propose: async (proposal) => {
       pending = proposal
@@ -25,10 +36,14 @@ export default async function handler(req, res) {
     const calls = []
     const reply = await runTurn({
       history, tools, forDate,
+      userId: who.userId,
+      apiKey: key,
       onToolCall: (c) => calls.push(c.name),
       stop: () => pending !== null,
     })
-    return send(res, 200, { reply, proposal: pending, calls, history })
+    // `unpaid` rides along so the UI can show the subscription notice without
+    // a second request, and without blocking the meal that just worked.
+    return send(res, 200, { reply, proposal: pending, calls, history, plan, unpaid })
   } catch (err) {
     const message = {
       rate_limit: "Gemini's free tier is rate limited - wait a few seconds and say that again.",

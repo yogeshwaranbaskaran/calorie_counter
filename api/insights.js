@@ -1,9 +1,13 @@
 import range from './range.js'
 import { getInsights } from '../src/insights.js'
-import { send, authed } from '../src/http.js'
+import { send, requireUser } from '../src/http.js'
+import { keyForUser } from '../src/auth.js'
 
 export default async function handler(req, res) {
-  if (!authed(req)) return send(res, 401, { error: 'bad passcode' })
+  const who = await requireUser(req, res)
+  if (!who) return
+  const { key, missingKey } = keyForUser(who.user)
+  if (missingKey) return send(res, 402, { error: 'Add your Gemini API key first.', code: 'no_key' })
 
   // Reuse the range handler rather than recomputing the window, by capturing
   // what it would have sent.
@@ -17,7 +21,7 @@ export default async function handler(req, res) {
   }
 
   try {
-    return send(res, 200, { range: { from: captured.from, to: captured.to }, ...(await getInsights(captured)) })
+    return send(res, 200, { range: { from: captured.from, to: captured.to }, ...(await getInsights(captured, key)) })
   } catch (err) {
     const msg = err.code === 'rate_limit'
       ? "Gemini's free tier is rate limited - try again in a minute."

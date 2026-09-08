@@ -11,6 +11,7 @@ import entry from './api/entry.js'
 import range from './api/range.js'
 import insights from './api/insights.js'
 import health from './api/health.js'
+import auth from './api/auth.js'
 import { backend } from './src/store.js'
 
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), 'public')
@@ -27,7 +28,8 @@ const MIME = {
 
 createServer(async (req, res) => {
   const path = new URL(req.url, 'http://x').pathname
-  const route = routes[path]
+  // /api/auth/* is one handler with sub-actions in the path.
+  const route = path.startsWith('/api/auth') ? auth : routes[path]
   if (route) {
     try {
       return await route(req, res)
