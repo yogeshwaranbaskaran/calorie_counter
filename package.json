@@ -5,10 +5,18 @@
   "private": true,
   "scripts": {
     "log": "node --env-file=.env cli.js",
-    "dev": "node --env-file=.env dev.js",
+    "dev": "node --env-file=.env server.js",
     "smoke": "node src/smoke.js",
     "seed": "node --env-file=.env src/seed.js",
     "reset": "node -e \"require('fs').writeFileSync('data/foods.json','{}');require('fs').writeFileSync('data/log.json','[]')\"",
-    "foods": "node --env-file=.env src/foodfix.js"
+    "foods": "node --env-file=.env src/foodfix.js",
+    "start": "node server.js",
+    "migrate": "node src/migrate.js"
+  },
+  "dependencies": {
+    "pg": "^8.23.0"
+  },
+  "engines": {
+    "node": ">=20"
   }
 }

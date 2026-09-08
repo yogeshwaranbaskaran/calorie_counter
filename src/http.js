@@ -14,7 +14,7 @@ export function authed(req) {
 }
 
 export async function readBody(req) {
-  if (req.body) return req.body // Vercel parses JSON for us
+  if (req.body) return req.body // already parsed by a framework, if any
   const chunks = []
   for await (const c of req) chunks.push(c)
   if (!chunks.length) return {}

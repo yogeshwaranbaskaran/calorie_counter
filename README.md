@@ -8,6 +8,7 @@ Zero npm dependencies. Node 18+ for native fetch.
 ## run locally
 
     cp .env.example .env      # paste a Gemini key
+    npm install               # only pg, and only needed for Postgres
     npm run dev               # web app on localhost:3000
     npm run log               # terminal version
     npm run smoke             # exercises the loop with NO api key
@@ -29,11 +30,13 @@ Zero npm dependencies. Node 18+ for native fetch.
     src/agent.js    THE LOOP (~20 lines). the model's output decides if it repeats
     src/llm.js      the only file that names a provider - swap for Qwen/Groq here
     src/tools.js    the four tools, plus proposal/commit
-    src/store.js    JSON files locally, Supabase in production. same interface
-    api/            serverless functions: chat, commit, day
+    src/store.js    JSON files locally, Postgres (Neon) in production
+    server.js       the one server, used for local dev and production
+    api/            handlers: chat, commit, day, entry, range, insights
     public/         installable PWA, one HTML file
     cli.js          terminal front end
-    supabase/       schema
+    db/schema.sql   Postgres schema
+    src/migrate.js  copies local JSON into the database
 
 ## the rules that keep the numbers honest
 

@@ -1,15 +1,15 @@
 // Two backends, one interface. Local dev uses JSON files; production uses
-// Supabase over PostgREST. Nothing above this file knows which is running.
+// Postgres (Neon). Nothing above this file knows which is running.
 //
 // A food row is FLAT and stored PER SINGLE UNIT:
 //   { name, unit, grams_per_unit, kcal, protein_g, carbs_g, fat_g, sugar_g }
+// For unit "g" / "ml" the values are per 100 - see basisOf() in tools.js.
 import { readFile, writeFile } from 'node:fs/promises'
 import { join, dirname } from 'node:path'
 import { fileURLToPath } from 'node:url'
 
-const URL_ = process.env.SUPABASE_URL
-const KEY = process.env.SUPABASE_SERVICE_KEY // server-side only, never shipped
-const remote = Boolean(URL_ && KEY)
+const DB_URL = process.env.DATABASE_URL
+const remote = Boolean(DB_URL)
 
 // "2 Dosa " and "dosa" must land on the same row.
 export const normalize = (name) => name.trim().toLowerCase().replace(/\s+/g, ' ')
@@ -21,21 +21,41 @@ export function localDate(d = new Date()) {
   return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`
 }
 
-/* ---------------------------------------------------------------- supabase */
+/* ---------------------------------------------------------------- postgres */
 
-async function rest(path, { method = 'GET', body, prefer } = {}) {
-  const res = await fetch(`${URL_}/rest/v1/${path}`, {
-    method,
-    headers: {
-      apikey: KEY,
-      authorization: `Bearer ${KEY}`,
-      'content-type': 'application/json',
-      ...(prefer ? { prefer } : {}),
-    },
-    ...(body ? { body: JSON.stringify(body) } : {}),
-  })
-  if (!res.ok) throw new Error(`db ${res.status}: ${(await res.text()).slice(0, 200)}`)
-  return res.status === 204 ? null : res.json()
+let poolPromise = null
+// Imported lazily so local development needs no database driver at all and the
+// JSON path stays dependency-free.
+async function pool() {
+  poolPromise ??= (async () => {
+    const { default: pg } = await import('pg')
+    return new pg.Pool({
+      connectionString: DB_URL,
+      // Neon terminates TLS at its proxy with a chain Node does not ship, so
+      // verification is off there; a local database over plain TCP has no TLS
+      // at all, so do not demand it.
+      ssl: /localhost|127\.0\.0\.1|sslmode=disable/.test(DB_URL) ? false : { rejectUnauthorized: false },
+      max: 3, // a free Render instance serving one person needs very little
+      idleTimeoutMillis: 30_000,
+    })
+  })()
+  return poolPromise
+}
+
+const q = async (text, params = []) => (await (await pool()).query(text, params)).rows
+
+// Postgres returns DATE as a JS Date in the server's timezone, which can shift
+// the calendar day. Selecting it as text keeps YYYY-MM-DD exactly as stored.
+const DAY = `to_char(date, 'YYYY-MM-DD') as date`
+
+// numeric comes back as a string to preserve precision; the app wants numbers.
+const num = (r) => {
+  const out = {}
+  for (const [k, v] of Object.entries(r)) {
+    out[k] = v !== null && typeof v === 'string' && /^-?\d+(\.\d+)?$/.test(v) && k !== 'date'
+      ? Number(v) : v
+  }
+  return out
 }
 
 /* -------------------------------------------------------------------- json */
@@ -55,15 +75,15 @@ const writeJson = (file, v) => writeFile(join(DATA, file), JSON.stringify(v, nul
 
 export async function getFoods() {
   if (!remote) return readJson('foods.json', {})
-  const rows = await rest('foods?select=*')
-  return Object.fromEntries(rows.map((r) => [r.name, r]))
+  const rows = await q('select * from foods')
+  return Object.fromEntries(rows.map(num).map((r) => [r.name, r]))
 }
 
 export async function getFood(name) {
   const key = normalize(name)
   if (!remote) return (await getFoods())[key] ?? null
-  const rows = await rest(`foods?select=*&name=eq.${encodeURIComponent(key)}`)
-  return rows[0] ?? null
+  const rows = await q('select * from foods where name = $1', [key])
+  return rows[0] ? num(rows[0]) : null
 }
 
 export async function putFood(food) {
@@ -73,9 +93,17 @@ export async function putFood(food) {
     foods[row.name] = row
     return writeJson('foods.json', foods)
   }
-  // merge-duplicates = upsert, so re-confirming a food amends it in place
-  // rather than inserting a second conflicting row.
-  await rest('foods', { method: 'POST', body: [row], prefer: 'resolution=merge-duplicates' })
+  // Upsert, so re-confirming a food amends it in place rather than inserting a
+  // second conflicting row.
+  await q(
+    `insert into foods (name, unit, grams_per_unit, kcal, protein_g, carbs_g, fat_g, sugar_g, confirmed_at)
+     values ($1,$2,$3,$4,$5,$6,$7,$8, now())
+     on conflict (name) do update set
+       unit = excluded.unit, grams_per_unit = excluded.grams_per_unit,
+       kcal = excluded.kcal, protein_g = excluded.protein_g, carbs_g = excluded.carbs_g,
+       fat_g = excluded.fat_g, sugar_g = excluded.sugar_g, confirmed_at = now()`,
+    [row.name, row.unit, row.grams_per_unit, row.kcal, row.protein_g, row.carbs_g, row.fat_g, row.sugar_g]
+  )
 }
 
 export async function getLog(from, to) {
@@ -83,8 +111,12 @@ export async function getLog(from, to) {
     const all = await readJson('log.json', [])
     return from ? all.filter((r) => r.date >= from && r.date <= to) : all
   }
-  const range = from ? `&date=gte.${from}&date=lte.${to}` : ''
-  return rest(`log_entries?select=*${range}&order=date.asc`)
+  const rows = from
+    ? await q(`select id, ${DAY}, name, qty, unit, grams, kcal, protein_g, carbs_g, fat_g, sugar_g
+               from log_entries where date between $1 and $2 order by date, id`, [from, to])
+    : await q(`select id, ${DAY}, name, qty, unit, grams, kcal, protein_g, carbs_g, fat_g, sugar_g
+               from log_entries order by date, id`)
+  return rows.map(num)
 }
 
 export async function appendLog(entries) {
@@ -96,7 +128,13 @@ export async function appendLog(entries) {
     log.push(...entries.map((e) => ({ id: ++next, ...e })))
     return writeJson('log.json', log)
   }
-  await rest('log_entries', { method: 'POST', body: entries })
+  for (const e of entries) {
+    await q(
+      `insert into log_entries (date, name, qty, unit, grams, kcal, protein_g, carbs_g, fat_g, sugar_g)
+       values ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10)`,
+      [e.date, e.name, e.qty, e.unit, e.grams, e.kcal, e.protein_g, e.carbs_g, e.fat_g, e.sugar_g]
+    )
+  }
 }
 
 export async function deleteEntry(id) {
@@ -107,8 +145,8 @@ export async function deleteEntry(id) {
     await writeJson('log.json', kept)
     return true
   }
-  await rest(`log_entries?id=eq.${encodeURIComponent(id)}`, { method: 'DELETE' })
-  return true
+  const rows = await q('delete from log_entries where id = $1 returning id', [id])
+  return rows.length > 0
 }
 
-export const backend = () => (remote ? 'supabase' : 'json')
+export const backend = () => (remote ? 'postgres' : 'json')

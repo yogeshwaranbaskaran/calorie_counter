@@ -1,8 +1,12 @@
+-- Plain Postgres (Neon). Run once against your database:
+--   psql "$DATABASE_URL" -f db/schema.sql
+
 -- Foods are stored PER SINGLE UNIT. Quantity is applied at read time by code,
--- never by the model.
+-- never by the model. For unit 'g'/'ml' the values are per 100, the way a
+-- nutrition label states them.
 create table if not exists foods (
   name            text primary key,          -- already normalized (lowercased)
-  unit            text        not null,      -- piece, bowl, cup, glass, slice, g
+  unit            text        not null,      -- piece, bowl, cup, glass, slice, g, ml
   grams_per_unit  numeric     not null,
   kcal            numeric     not null,
   protein_g       numeric     not null,
@@ -28,9 +32,3 @@ create table if not exists log_entries (
 );
 
 create index if not exists log_entries_date_idx on log_entries (date);
-
--- Single-user app. Both tables are reached ONLY by the serverless functions
--- using the service_role key, which bypasses RLS - so RLS stays on with no
--- policies, and nothing is reachable with the public anon key.
-alter table foods       enable row level security;
-alter table log_entries enable row level security;

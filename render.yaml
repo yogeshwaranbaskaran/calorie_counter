@@ -1,0 +1,17 @@
+services:
+  - type: web
+    name: health-agent
+    runtime: node
+    plan: free
+    buildCommand: npm install
+    startCommand: npm start
+    healthCheckPath: /api/day
+    envVars:
+      - key: GEMINI_API_KEY
+        sync: false          # set in the Render dashboard, never in git
+      - key: GEMINI_MODEL
+        value: gemini-3.5-flash-lite
+      - key: DATABASE_URL
+        sync: false          # Neon pooled connection string
+      - key: APP_PASSCODE
+        sync: false          # without this the URL is open to anyone
