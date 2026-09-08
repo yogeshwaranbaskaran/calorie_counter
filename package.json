@@ -8,6 +8,7 @@
     "dev": "node --env-file=.env dev.js",
     "smoke": "node src/smoke.js",
     "seed": "node --env-file=.env src/seed.js",
-    "reset": "node -e \"require('fs').writeFileSync('data/foods.json','{}');require('fs').writeFileSync('data/log.json','[]')\""
+    "reset": "node -e \"require('fs').writeFileSync('data/foods.json','{}');require('fs').writeFileSync('data/log.json','[]')\"",
+    "foods": "node --env-file=.env src/foodfix.js"
   }
 }

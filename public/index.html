@@ -253,6 +253,9 @@ let logDate = isoToday()
 const headers = () => ({ 'content-type': 'application/json', 'x-passcode': pass })
 const esc = (s) => String(s).replace(/[<>&"]/g, (c) => ({ '<': '&lt;', '>': '&gt;', '&': '&amp;', '"': '&quot;' }[c]))
 // "250 x rice" reads as 250 servings. A weight belongs against its unit.
+// Display only. Stored names stay lowercase so lookups keep matching - this
+// capitalises the first letter at render time, not in the table.
+const cap = (t) => { const x = String(t); return x.charAt(0).toUpperCase() + x.slice(1) }
 const qtyLabel = (qty, unit) =>
   ['g', 'ml'].includes(String(unit).toLowerCase()) ? `${qty}${unit}` : `${qty} ×`
 const el = (cls, html) => { const d = document.createElement('div'); d.className = cls; if (html != null) d.innerHTML = html; return d }
@@ -285,7 +288,7 @@ function intro() {
 function todayPanel(rows) {
   const box = el('sect', `<h3>what you ate</h3>` + (rows.length ? rows.map((r) => `
     <div class="ent" data-id="${r.id}">
-      <span class="n">${qtyLabel(r.qty, r.unit)} ${esc(r.name)}</span>
+      <span class="n">${qtyLabel(r.qty, r.unit)} ${esc(cap(r.name))}</span>
       <span class="k">${r.kcal} kcal</span>
       <button class="x" title="remove">×</button>
     </div>`).join('') : '<p class="hint">Nothing logged yet today.</p>'))
@@ -342,7 +345,7 @@ function proposalCard(p) {
     r.orig_kcal = r.kcal_per_unit
     r.protein_per_unit = r.qty ? (r.protein_g * (r.basis || 1)) / r.qty : 0
     const line = el('prow', `
-      <span class="pn">${esc(r.name)}</span>
+      <span class="pn">${esc(cap(r.name))}</span>
       <div class="pctl">
         <input class="q" type="number" inputmode="decimal" min="0" step="0.5" value="${r.qty}">
         <span class="unit">${esc(r.basis > 1 ? r.unit : '× ' + r.unit)}</span>
@@ -476,6 +479,17 @@ function macroPanel(totals, avg) {
 }
 
 const DOW = ['S', 'M', 'T', 'W', 'T', 'F', 'S']
+const DAYS_FULL = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday']
+const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']
+const asDate = (iso) => { const [y, m, d] = iso.split('-').map(Number); return new Date(y, m - 1, d) }
+const dayName = (iso) => DAYS_FULL[asDate(iso).getDay()]
+// "Wednesday, 8 Sep" beats "2026-09-08" for a log you scroll through by feel.
+const prettyDate = (iso) => {
+  const d = asDate(iso)
+  const rel = iso === isoToday() ? 'Today' : iso === shiftIso(isoToday(), -1) ? 'Yesterday' : null
+  const base = `${dayName(iso)}, ${d.getDate()} ${MONTHS[d.getMonth()]}`
+  return rel ? `${rel} · ${base}` : base
+}
 const dowOf = (iso) => { const [y, m, d] = iso.split('-').map(Number); return DOW[new Date(y, m - 1, d).getDay()] }
 const dayNum = (iso) => Number(iso.slice(8))
 
@@ -547,7 +561,7 @@ async function viewLog() {
   if (d.rows.length) {
     // Averages are loaded lazily so the log stays instant; the reference marks
     // appear a moment later rather than blocking the screen.
-    const card = el('sect', `<h3>${logDate === isoToday() ? 'today' : logDate}</h3>
+    const card = el('sect', `<h3>${prettyDate(logDate)}</h3>
       <div class="bignum"><b>${d.totals.kcal}</b><span>kcal</span>
         <span class="delta" id="vsavg"></span></div>
       <div id="macros">${macroPanel(d.totals, null)}</div>`)
@@ -610,12 +624,12 @@ async function viewWeek() {
 
   const sel = r.days.find((d) => d.date === pickedDay) ?? r.days.at(-1)
   view.appendChild(el('sect',
-    `<h3>${sel.date}</h3>` +
+    `<h3>${prettyDate(sel.date)}</h3>` +
     (sel.items.length
       ? `<div class="bignum"><b>${sel.kcal}</b><span>kcal</span></div>` +
         macroPanel(sel, r.averages) +
         `<div style="margin-top:12px">` +
-        sel.items.map((i) => `<div class="ent"><span class="n">${qtyLabel(i.qty, i.unit)} ${esc(i.name)}</span><span class="k">${i.kcal} kcal</span></div>`).join('') +
+        sel.items.map((i) => `<div class="ent"><span class="n">${qtyLabel(i.qty, i.unit)} ${esc(cap(i.name))}</span><span class="k">${i.kcal} kcal</span></div>`).join('') +
         `</div>`
       : '<p class="hint">Nothing logged this day.</p>')))
 }
@@ -674,15 +688,15 @@ async function viewStats() {
     `</div>`))
 
   view.appendChild(el('sect', `<h3>spread</h3>
-    <div class="row"><span>highest day</span><span>${hi.date} · ${hi.kcal} kcal</span></div>
-    <div class="row"><span>lowest day</span><span>${lo.date} · ${lo.kcal} kcal</span></div>
+    <div class="row"><span>highest day</span><span>${dayName(hi.date)} ${hi.date.slice(8)} ${MONTHS[asDate(hi.date).getMonth()]} · ${hi.kcal} kcal</span></div>
+    <div class="row"><span>lowest day</span><span>${dayName(lo.date)} ${lo.date.slice(8)} ${MONTHS[asDate(lo.date).getMonth()]} · ${lo.kcal} kcal</span></div>
     <div class="row"><span>range</span><span>${Math.max(...kcals) - Math.min(...kcals)} kcal</span></div>
     <div class="row"><span>days over average</span><span>${kcals.filter((k) => k > a.kcal).length} of ${kcals.length}</span></div>`))
 
   const max = Math.max(...r.topFoods.map((f) => f.times), 1)
   view.appendChild(el('sect', `<h3>most eaten · last ${statsSpan} days</h3>` +
     r.topFoods.map((f) => `<div class="frow">
-      <span class="fn">${esc(f.name)}</span>
+      <span class="fn">${esc(cap(f.name))}</span>
       <span class="fb"><i style="width:${f.times / max * 100}%"></i></span>
       <span class="fc">${f.times}×</span>
     </div>`).join('')))
@@ -767,7 +781,7 @@ function setDay(iso) {
   $('picker').value = logDate
   const past = logDate !== isoToday()
   $('daybar').classList.toggle('past', past)
-  $('daytag').textContent = past ? 'backfilling' : ''
+  $('daytag').textContent = past ? `${dayName(logDate)} · backfilling` : dayName(logDate)
   $('next').disabled = !past          // no logging into the future
   chat = []                            // a new day starts a clean conversation
   history = []
