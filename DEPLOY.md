@@ -85,6 +85,10 @@ The password prompt wants your **PAT**, not your account password.
    **If it says `store: json`, `DATABASE_URL` did not reach the app** — the
    app is running on an empty filesystem that Render wipes on every deploy.
 
+5. Check `https://<your-app>.onrender.com/api/health` — it needs no passcode
+   and answers `{"ok":true,"store":"postgres"}`. A 503 means the app is up but
+   cannot reach Neon, and the message says why.
+
 ## 5. Phone
 
 Open the URL in Chrome → menu → **Add to home screen**. Enter the passcode

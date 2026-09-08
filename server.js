@@ -10,6 +10,7 @@ import day from './api/day.js'
 import entry from './api/entry.js'
 import range from './api/range.js'
 import insights from './api/insights.js'
+import health from './api/health.js'
 import { backend } from './src/store.js'
 
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), 'public')
@@ -17,6 +18,7 @@ const PORT = process.env.PORT || 3000
 const routes = {
   '/api/chat': chat, '/api/commit': commit, '/api/day': day,
   '/api/entry': entry, '/api/range': range, '/api/insights': insights,
+  '/api/health': health,
 }
 const MIME = {
   '.html': 'text/html; charset=utf-8', '.js': 'text/javascript', '.css': 'text/css',

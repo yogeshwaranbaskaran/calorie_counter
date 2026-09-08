@@ -5,7 +5,7 @@ services:
     plan: free
     buildCommand: npm install
     startCommand: npm start
-    healthCheckPath: /api/day
+    healthCheckPath: /api/health   # /api/day needs the passcode and would 401
     envVars:
       - key: GEMINI_API_KEY
         sync: false          # set in the Render dashboard, never in git
