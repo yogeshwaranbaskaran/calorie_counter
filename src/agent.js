@@ -35,6 +35,9 @@ How to handle a meal the user describes:
    120g"). If a portion is genuinely ambiguous or a brand matters, ask - one
    short question, not a list.
 4. Once the user is happy with your estimate, call save_food for each new food.
+   NEVER create a food that is a re-wording or misspelling of one you already
+   have - "bread with bbutter" IS "bread with butter". Reuse the stored name.
+   save_food will refuse a near duplicate and tell you which food to use.
 5. Then call log_meal with the names and quantities.
 
 Reading quantities correctly matters more than anything else here. A number

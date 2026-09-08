@@ -1,7 +1,7 @@
 // What the agent can DO. Note what is NOT here: there is no "estimate calories"
 // tool. Estimating is thinking, and the model already thinks. Tools exist only
 // for what it CANNOT do - read the table, write the table.
-import { getFood, putFood, appendLog, getLog, normalize, localDate } from './store.js'
+import { getFood, getFoods, putFood, appendLog, getLog, normalize, localDate } from './store.js'
 
 const S = 'STRING'
 const N = 'NUMBER'
@@ -75,6 +75,56 @@ export const declarations = [
 ]
 
 const round = (n) => Math.round(n * 10) / 10
+
+// ---------------------------------------------------------------- matching
+// The model is told the whole food table and STILL created "bread with
+// bbutter" next to "bread with butter". Prompting is not enough, so near
+// duplicates are refused in code - the same way log_meal refuses an unknown
+// food. A typo must resolve to the food you already have.
+const squash = (s) => normalize(s).replace(/[^a-z0-9 ]/g, '')
+
+function editDistance(a, b) {
+  if (a === b) return 0
+  const prev = Array.from({ length: b.length + 1 }, (_, i) => i)
+  for (let i = 1; i <= a.length; i++) {
+    let last = prev[0]
+    prev[0] = i
+    for (let j = 1; j <= b.length; j++) {
+      const tmp = prev[j]
+      prev[j] = Math.min(prev[j] + 1, prev[j - 1] + 1, last + (a[i - 1] === b[j - 1] ? 0 : 1))
+      last = tmp
+    }
+  }
+  return prev[b.length]
+}
+
+// Multi-digit numbers in a food name are usually its calorie count, so they
+// carry meaning that edit distance throws away: "200cal snacks" and
+// "100 cal snacks" differ by one character and are NOT the same food.
+// Single digits are ignored because they turn up inside typos ("icecre3am").
+const bigNumbers = (s) => (String(s).match(/\d{2,}/g) ?? []).sort().join(',')
+
+export const similarity = (a, b) => {
+  const x = squash(a), y = squash(b)
+  if (!x || !y) return 0
+  if (bigNumbers(x) !== bigNumbers(y)) return 0
+  return 1 - editDistance(x, y) / Math.max(x.length, y.length)
+}
+
+// 0.85 keeps genuine typos together and genuine differences apart:
+//   bread with butter / bread with bbutter  0.94  -> same
+//   eggs with oil     / egg with oil        0.96  -> same
+//   chicken           / chicken curry       0.54  -> different
+//   icecream          / 120cals icecream    0.50  -> different (300 vs 120 kcal)
+const SAME = 0.85
+
+export async function findSimilar(name, foods) {
+  const all = foods ?? (await getFoods())
+  return Object.values(all)
+    .map((f) => ({ food: f, score: similarity(name, f.name) }))
+    .filter((x) => x.score >= SAME)
+    .sort((a, b) => b.score - a.score)[0] ?? null
+}
 
 // Weights and volumes are stated PER 100 - the way every nutrition label does
 // it - so a stored value of 180 kcal for unit "g" means 180 per 100g. Anything
@@ -173,17 +223,33 @@ export async function commitProposal({ date, items }) {
 export function makeTools({ propose, forDate }) {
   return {
     async lookup_food({ names = [] }) {
+      const all = await getFoods()
       const hits = {}
       const misses = []
       for (const raw of names) {
-        const food = await getFood(raw)
-        if (food) hits[normalize(raw)] = food
+        const exact = all[normalize(raw)]
+        if (exact) { hits[normalize(raw)] = exact; continue }
+        // A near match is reported as a hit under the name already stored, so
+        // the model logs against the existing food instead of making a twin.
+        const near = await findSimilar(raw, all)
+        if (near) hits[near.food.name] = { ...near.food, matched_your_text: raw }
         else misses.push(raw)
       }
       return { hits, misses }
     },
 
     async save_food(args) {
+      const all = await getFoods()
+      const near = all[normalize(args.name)] ? null : await findSimilar(args.name, all)
+      if (near) {
+        return {
+          error: 'similar_food_already_exists',
+          existing: near.food.name,
+          detail: `"${args.name}" is the same as "${near.food.name}" which you already have. ` +
+            `Use "${near.food.name}" in log_meal. Only save a new food if it is genuinely different ` +
+            `(a different size or product), and then give it a clearly different name.`,
+        }
+      }
       await putFood({
         name: args.name.trim(),
         unit: args.unit,

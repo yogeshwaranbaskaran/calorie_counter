@@ -9,6 +9,7 @@
 // stored gram weight as the source of truth, so history stays consistent and
 // no calories are invented.
 import { getFoods, putFood, getLog, normalize } from './store.js'
+import { similarity } from './tools.js'
 import { readFile, writeFile } from 'node:fs/promises'
 import { join, dirname } from 'node:path'
 import { fileURLToPath } from 'node:url'
@@ -70,6 +71,29 @@ if (cmd === 'list') {
   }
   console.log(`\n${rows.length} foods, ${rows.filter((r) => r.flags.length).length} suspicious, ` +
     `${rows.filter((r) => !r.used).length} never used`)
+}
+
+else if (cmd === 'dupes') {
+  // Same scoring the agent uses at save time, applied to what is already
+  // stored - so the table can be cleaned with the same definition of "same".
+  const counts = {}
+  for (const r of log) counts[r.name] = (counts[r.name] ?? 0) + 1
+  const names = Object.values(foods).map((f) => f.name)
+  const pairs = []
+  for (let i = 0; i < names.length; i++) {
+    for (let j = i + 1; j < names.length; j++) {
+      const score = similarity(names[i], names[j])
+      if (score >= 0.8) pairs.push({ a: names[i], b: names[j], score })
+    }
+  }
+  pairs.sort((x, y) => y.score - x.score)
+  for (const { a, b, score } of pairs) {
+    // Merge into whichever is used more; ties go to the longer, more specific name.
+    const [into, from] = (counts[a] ?? 0) >= (counts[b] ?? 0) ? [a, b] : [b, a]
+    console.log(`${score.toFixed(2)}  "${from}" (${counts[from] ?? 0}x)  ->  "${into}" (${counts[into] ?? 0}x)`)
+    console.log(`        npm run foods merge ${JSON.stringify(from)} ${JSON.stringify(into)}`)
+  }
+  console.log(`\n${pairs.length} candidate pairs at >= 0.80`)
 }
 
 else if (cmd === 'setunit') {
