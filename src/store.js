@@ -26,21 +26,40 @@ export function localDate(d = new Date()) {
 let poolPromise = null
 // Imported lazily so local development needs no database driver at all and the
 // JSON path stays dependency-free.
+// SSL is decided by the `ssl` option below, so sslmode is stripped from the
+// URL. Leaving both in place makes pg warn that it currently treats
+// sslmode=require as verify-full and will change that in v9 - ambiguity we do
+// not need, since the intent is expressed once, here.
+function splitUrl(url) {
+  try {
+    const u = new URL(url)
+    const local = ['localhost', '127.0.0.1'].includes(u.hostname)
+    const disabled = u.searchParams.get('sslmode') === 'disable'
+    for (const k of ['sslmode', 'ssl', 'channel_binding']) u.searchParams.delete(k)
+    return { clean: u.toString(), plain: local || disabled }
+  } catch {
+    return { clean: url, plain: /localhost|127\.0\.0\.1|sslmode=disable/.test(url) }
+  }
+}
+
 async function pool() {
   poolPromise ??= (async () => {
     const { default: pg } = await import('pg')
+    const { clean, plain } = splitUrl(DB_URL)
     return new pg.Pool({
-      connectionString: DB_URL,
+      connectionString: clean,
       // Neon terminates TLS at its proxy with a chain Node does not ship, so
       // verification is off there; a local database over plain TCP has no TLS
       // at all, so do not demand it.
-      ssl: /localhost|127\.0\.0\.1|sslmode=disable/.test(DB_URL) ? false : { rejectUnauthorized: false },
+      ssl: plain ? false : { rejectUnauthorized: false },
       max: 3, // a free Render instance serving one person needs very little
       idleTimeoutMillis: 30_000,
     })
   })()
   return poolPromise
 }
+
+export const _splitUrl = splitUrl // exported for tests only
 
 const q = async (text, params = []) => (await (await pool()).query(text, params)).rows
 

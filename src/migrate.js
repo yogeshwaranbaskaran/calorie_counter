@@ -14,10 +14,11 @@ const DATA = join(dirname(fileURLToPath(import.meta.url)), '..', 'data')
 if (!process.env.DATABASE_URL) throw new Error('set DATABASE_URL first')
 
 const { default: pg } = await import('pg')
-const url = process.env.DATABASE_URL
+const { _splitUrl } = await import('./store.js')
+const { clean, plain } = _splitUrl(process.env.DATABASE_URL)
 const pool = new pg.Pool({
-  connectionString: url,
-  ssl: /localhost|127\.0\.0\.1|sslmode=disable/.test(url) ? false : { rejectUnauthorized: false },
+  connectionString: clean,
+  ssl: plain ? false : { rejectUnauthorized: false },
 })
 
 const foods = JSON.parse(await readFile(join(DATA, 'foods.json'), 'utf8'))
