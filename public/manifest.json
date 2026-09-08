@@ -1,9 +1,16 @@
 {
-  "name": "health agent",
-  "short_name": "health",
+  "name": "Calorie Counter",
+  "short_name": "Calories",
   "start_url": "/",
   "display": "standalone",
   "background_color": "#0e1012",
   "theme_color": "#0e1012",
-  "icons": [{ "src": "/icon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any maskable" }]
+  "icons": [
+    {
+      "src": "/icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
 }

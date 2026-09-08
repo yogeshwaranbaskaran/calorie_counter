@@ -7,7 +7,7 @@
 <meta name="mobile-web-app-capable" content="yes">
 <link rel="manifest" href="/manifest.json">
 <link rel="icon" href="/icon.svg" type="image/svg+xml">
-<title>health agent</title>
+<title>Calorie Counter</title>
 <style>
 :root{
   --bg:#0e1012; --surface:#17191d; --raised:#1d2026; --line:#24272c; --text:#e8eaed;
@@ -766,7 +766,7 @@ function switchTab(name) {
 document.querySelectorAll('nav button').forEach((b) => (b.onclick = () => switchTab(b.dataset.tab)))
 
 function gate(message) {
-  document.body.innerHTML = `<div class="gate"><h2>health agent</h2>
+  document.body.innerHTML = `<div class="gate"><h2>Calorie Counter</h2>
     <p style="color:#8b9199;font-size:14px">${esc(message || 'enter the passcode')}</p>
     <input id="p" type="password" style="width:100%;margin:8px 0" enterkeyhint="go">
     <button class="b go" id="ok" style="width:100%">unlock</button></div>`

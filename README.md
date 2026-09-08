@@ -1,4 +1,4 @@
-# health agent
+# calorie counter
 
 A food logger built as an actual agent: the model gets tools and decides which
 to call, how many times, and when it is done. Not a single prompt call.

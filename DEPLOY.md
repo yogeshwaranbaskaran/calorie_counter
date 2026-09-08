@@ -35,7 +35,7 @@ DATABASE_URL=postgresql://USER:PASSWORD@ep-xxx-pooler.REGION.aws.neon.tech/neond
 No quotes, no spaces around the `=`, all on one line. Then:
 
 ```
-cd ~/Projects/health-agent
+cd ~/Projects/calorie_counter
 npm run migrate
 ```
 
@@ -56,7 +56,7 @@ carry their existing id, so a second run inserts nothing.
 ## 3. GitHub
 
 ```
-git remote add origin https://github.com/<you>/health-agent.git
+git remote add origin https://github.com/<you>/calorie_counter.git
 git push -u origin main
 ```
 

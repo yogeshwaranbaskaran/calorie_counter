@@ -25,7 +25,7 @@ const propose = async ({ date, rows, totals }) => {
 const tools = makeTools({ propose })
 const history = []
 
-console.log(bold('\n  health agent'))
+console.log(bold('\n  calorie counter'))
 console.log(dim(`  ${Object.keys(await getFoods()).length} foods known (${backend()}). ctrl-c to quit.\n`))
 
 while (true) {
