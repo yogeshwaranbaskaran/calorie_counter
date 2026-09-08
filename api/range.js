@@ -35,7 +35,7 @@ export default async function handler(req, res) {
       const day = days[r.date]
       if (!day) continue
       for (const k of KEYS) day[k] = round(day[k] + (r[k] ?? 0))
-      day.items.push({ id: r.id, name: r.name, qty: r.qty, kcal: r.kcal })
+      day.items.push({ id: r.id, name: r.name, qty: r.qty, unit: r.unit, kcal: r.kcal })
 
       const f = (foods[r.name] ??= { name: r.name, times: 0, kcal: 0 })
       f.times += 1

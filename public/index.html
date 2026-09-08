@@ -145,6 +145,34 @@ svg{display:block; width:100%; height:auto; overflow:visible}
 .frow .fb i{display:block; height:100%; background:var(--accent); border-radius:4px}
 .frow .fc{color:var(--muted); font-size:12.5px; font-variant-numeric:tabular-nums; width:52px; text-align:right}
 
+/* ---------- macro panel ---------- */
+.mrow{display:flex; align-items:center; gap:10px; padding:6px 0; font-size:13.5px}
+.mrow .ml{width:58px; color:var(--muted); flex:0 0 auto}
+.mrow .mt{flex:1; height:9px; background:var(--raised); border-radius:5px; position:relative; overflow:hidden}
+.mrow .mt i{display:block; height:100%; border-radius:5px}
+.mrow .mt u{position:absolute; top:-3px; bottom:-3px; width:2px; background:var(--faint); text-decoration:none}
+.mrow .mv{width:76px; text-align:right; flex:0 0 auto; font-variant-numeric:tabular-nums}
+.mrow .mv small{color:var(--faint); font-size:11px}
+
+.bignum{display:flex; align-items:baseline; gap:9px; margin-bottom:4px}
+.bignum b{font-size:34px; line-height:1; font-variant-numeric:tabular-nums}
+.bignum span{color:var(--muted); font-size:13px}
+.bignum .delta{margin-left:auto; font-size:12px; color:var(--faint)}
+
+/* ---------- metric switcher ---------- */
+.pills{display:flex; gap:6px; flex-wrap:wrap; margin-bottom:12px}
+.pills button{
+  background:var(--raised); border:1px solid var(--line); color:var(--muted);
+  border-radius:999px; padding:5px 11px; font:inherit; font-size:12.5px; cursor:pointer;
+}
+.pills button.on{background:var(--accent); border-color:var(--accent); color:#0e1012; font-weight:600}
+
+/* ---------- small multiples ---------- */
+.sm{display:grid; grid-template-columns:1fr 1fr; gap:14px}
+.sm figure{margin:0}
+.sm figcaption{font-size:11.5px; color:var(--muted); margin-bottom:3px; display:flex; justify-content:space-between}
+.sm figcaption b{color:var(--text); font-weight:600; font-variant-numeric:tabular-nums}
+
 /* ---------- insight cards ---------- */
 .ins{border-left:3px solid var(--line); padding:2px 0 2px 12px; margin-bottom:14px}
 .ins.up{border-color:var(--fat)}
@@ -224,6 +252,9 @@ let logDate = isoToday()
 
 const headers = () => ({ 'content-type': 'application/json', 'x-passcode': pass })
 const esc = (s) => String(s).replace(/[<>&"]/g, (c) => ({ '<': '&lt;', '>': '&gt;', '&': '&amp;', '"': '&quot;' }[c]))
+// "250 x rice" reads as 250 servings. A weight belongs against its unit.
+const qtyLabel = (qty, unit) =>
+  ['g', 'ml'].includes(String(unit).toLowerCase()) ? `${qty}${unit}` : `${qty} ×`
 const el = (cls, html) => { const d = document.createElement('div'); d.className = cls; if (html != null) d.innerHTML = html; return d }
 const api = async (path, opts) => {
   const r = await fetch(path, { headers: headers(), ...opts })
@@ -252,9 +283,9 @@ function intro() {
 }
 
 function todayPanel(rows) {
-  const box = el('sect', `<h3>${logDate === isoToday() ? 'today' : logDate}</h3>` + (rows.length ? rows.map((r) => `
+  const box = el('sect', `<h3>what you ate</h3>` + (rows.length ? rows.map((r) => `
     <div class="ent" data-id="${r.id}">
-      <span class="n">${r.qty} × ${esc(r.name)}</span>
+      <span class="n">${qtyLabel(r.qty, r.unit)} ${esc(r.name)}</span>
       <span class="k">${r.kcal} kcal</span>
       <button class="x" title="remove">×</button>
     </div>`).join('') : '<p class="hint">Nothing logged yet today.</p>'))
@@ -314,7 +345,7 @@ function proposalCard(p) {
       <span class="pn">${esc(r.name)}</span>
       <div class="pctl">
         <input class="q" type="number" inputmode="decimal" min="0" step="0.5" value="${r.qty}">
-        <span class="unit">${esc(r.unit)}</span>
+        <span class="unit">${esc(r.basis > 1 ? r.unit : '× ' + r.unit)}</span>
         <input class="k" type="number" inputmode="numeric" min="0" step="5" value="${Math.round(r.kcal_per_unit)}">
         <span class="unit">kcal${r.basis > 1 ? '/100' + esc(r.unit) : ' each'}</span>
         <span class="sub"></span>
@@ -412,6 +443,38 @@ async function send() {
 
 /* =========================================================== CHARTS ===== */
 
+// Protein and carbs are 4 kcal/g, fat 9, so a macro's share of energy is a
+// different story from its weight in grams - the panel shows both.
+const MACROS = [
+  { k: 'protein_g', label: 'protein', v: 'protein', kcalPerG: 4 },
+  { k: 'carbs_g',   label: 'carbs',   v: 'carbs',   kcalPerG: 4 },
+  { k: 'fat_g',     label: 'fat',     v: 'fat',     kcalPerG: 9 },
+  { k: 'sugar_g',   label: 'sugar',   v: 'carbs',   kcalPerG: 4, sub: true },
+]
+
+// Bars are scaled against your own running average, so "a lot" means a lot
+// FOR YOU - no invented daily targets, which would need an onboarding flow and
+// would be a guess anyway.
+function macroPanel(totals, avg) {
+  const energy = MACROS.filter((m) => !m.sub)
+    .reduce((t, m) => t + (totals[m.k] || 0) * m.kcalPerG, 0)
+
+  return MACROS.map((m) => {
+    const g = totals[m.k] || 0
+    const ref = avg?.[m.k] || 0
+    const top = Math.max(g, ref) * 1.25 || 1
+    const pct = energy && !m.sub ? Math.round((g * m.kcalPerG / energy) * 100) : null
+    return `<div class="mrow">
+      <span class="ml">${m.label}</span>
+      <span class="mt">
+        <i style="width:${Math.min(100, g / top * 100)}%;background:var(--${m.v});${m.sub ? 'opacity:.55' : ''}"></i>
+        ${ref ? `<u style="left:${Math.min(99, ref / top * 100)}%" title="your average ${ref}g"></u>` : ''}
+      </span>
+      <span class="mv">${Math.round(g)}g${pct !== null ? ` <small>${pct}%</small>` : ''}</span>
+    </div>`
+  }).join('')
+}
+
 const DOW = ['S', 'M', 'T', 'W', 'T', 'F', 'S']
 const dowOf = (iso) => { const [y, m, d] = iso.split('-').map(Number); return DOW[new Date(y, m - 1, d).getDay()] }
 const dayNum = (iso) => Number(iso.slice(8))
@@ -419,25 +482,26 @@ const dayNum = (iso) => Number(iso.slice(8))
 // Vertical bars, one series, so no legend - the section title names it.
 // Tapping a bar selects that day rather than relying on hover, which does not
 // exist on a phone.
-function weekChart(days, avg, onPick, picked) {
+function weekChart(days, avg, metric, picked, color) {
   const W = 320, H = 150, PAD_B = 22, PAD_T = 14
-  const max = Math.max(...days.map((d) => d.kcal), avg, 1)
+  const max = Math.max(...days.map((d) => d[metric] || 0), avg, 1)
   const scale = (v) => (H - PAD_B - PAD_T) * (v / max)
   const bw = W / days.length
   const inner = bw - 6 // 2px+ of surface between adjacent bars
 
   const bars = days.map((d, i) => {
-    const h = scale(d.kcal)
+    const value = d[metric] || 0
+    const h = scale(value)
     const x = i * bw + 3
     const y = H - PAD_B - h
     const on = d.date === picked
     return `<g class="bar" data-date="${d.date}">
       <rect class="hit" x="${i * bw}" y="0" width="${bw}" height="${H}"></rect>
-      ${d.kcal ? `<rect x="${x}" y="${y}" width="${inner}" height="${h}" rx="4"
-          fill="${on ? 'var(--accent)' : 'var(--fat)'}"></rect>`
+      ${value ? `<rect x="${x}" y="${y}" width="${inner}" height="${h}" rx="4"
+          fill="${on ? 'var(--accent)' : color}"></rect>`
         : `<rect x="${x}" y="${H - PAD_B - 3}" width="${inner}" height="3" rx="1.5" fill="var(--line)"></rect>`}
       <text class="axis ${on ? 'on' : ''}" x="${x + inner / 2}" y="${H - 8}" text-anchor="middle">${dowOf(d.date)}</text>
-      ${on && d.kcal ? `<text class="vlabel" x="${x + inner / 2}" y="${y - 5}" text-anchor="middle">${d.kcal}</text>` : ''}
+      ${on && value ? `<text class="vlabel" x="${x + inner / 2}" y="${y - 5}" text-anchor="middle">${Math.round(value)}</text>` : ''}
     </g>`
   }).join('')
 
@@ -479,6 +543,23 @@ async function loadRange(days = 7) {
 async function viewLog() {
   const d = await loadDay()
   view.innerHTML = ''
+
+  if (d.rows.length) {
+    // Averages are loaded lazily so the log stays instant; the reference marks
+    // appear a moment later rather than blocking the screen.
+    const card = el('sect', `<h3>${logDate === isoToday() ? 'today' : logDate}</h3>
+      <div class="bignum"><b>${d.totals.kcal}</b><span>kcal</span>
+        <span class="delta" id="vsavg"></span></div>
+      <div id="macros">${macroPanel(d.totals, null)}</div>`)
+    view.appendChild(card)
+    loadRange(30).then((r) => {
+      if (!r?.daysLogged || !card.isConnected) return
+      card.querySelector('#macros').innerHTML = macroPanel(d.totals, r.averages)
+      const diff = d.totals.kcal - r.averages.kcal
+      card.querySelector('#vsavg').textContent =
+        `${diff >= 0 ? '+' : ''}${Math.round(diff)} vs your average`
+    }).catch(() => {})
+  }
   // An empty "today" card above the intro is just clutter on first open - show
   // one or the other, never both.
   if (d.rows.length) view.appendChild(todayPanel(d.rows))
@@ -487,15 +568,43 @@ async function viewLog() {
   view.scrollTop = view.scrollHeight
 }
 
-async function viewWeek() {
-  const r = await loadRange(7)
-  view.innerHTML = ''
-  if (!r.daysLogged) return view.appendChild(el('sect', '<h3>this week</h3><p class="hint">Nothing logged in the last 7 days. Log a meal and this fills in.</p>'))
+const METRICS = [
+  { key: 'kcal', label: 'calories', unit: 'kcal', color: 'var(--fat)' },
+  { key: 'protein_g', label: 'protein', unit: 'g', color: 'var(--protein)' },
+  { key: 'carbs_g', label: 'carbs', unit: 'g', color: 'var(--carbs)' },
+  { key: 'fat_g', label: 'fat', unit: 'g', color: 'var(--fat)' },
+  { key: 'sugar_g', label: 'sugar', unit: 'g', color: 'var(--carbs)' },
+]
+let weekMetric = 'kcal'
+let weekSpan = 7
 
-  pickedDay ??= r.days[r.days.length - 1].date
-  // The average rides in the heading, not on the plot: as a floating label it
-  // collided with the selected day's value.
-  const chart = el('sect', `<h3>calories · last 7 days · avg ${Math.round(r.averages.kcal)} (dashed)</h3>${weekChart(r.days, r.averages.kcal, null, pickedDay)}`)
+async function viewWeek() {
+  const r = await loadRange(weekSpan)
+  view.innerHTML = ''
+
+  const spans = el('sect', `<h3>window</h3><div class="pills">` +
+    [7, 14, 30].map((n) => `<button data-n="${n}" class="${n === weekSpan ? 'on' : ''}">${n} days</button>`).join('') +
+    `</div>`)
+  spans.querySelectorAll('button').forEach((b) => (b.onclick = () => {
+    weekSpan = Number(b.dataset.n); pickedDay = null; viewWeek()
+  }))
+  view.appendChild(spans)
+
+  if (!r.daysLogged) {
+    return view.appendChild(el('sect', `<h3>last ${weekSpan} days</h3><p class="hint">Nothing logged yet in this window.</p>`))
+  }
+
+  const m = METRICS.find((x) => x.key === weekMetric)
+  const avg = r.averages[m.key] || 0
+  pickedDay ??= r.days.filter((d) => d.items.length).at(-1)?.date ?? r.days.at(-1).date
+
+  // One metric at a time: two measures on one plot would need two scales, and
+  // a dual axis is the fastest way to make a chart lie.
+  const chart = el('sect', `<h3>${m.label} · last ${weekSpan} days · avg ${Math.round(avg)}${m.unit} (dashed)</h3>
+    <div class="pills">` +
+    METRICS.map((x) => `<button data-k="${x.key}" class="${x.key === weekMetric ? 'on' : ''}">${x.label}</button>`).join('') +
+    `</div>${weekChart(r.days, avg, m.key, pickedDay, m.color)}`)
+  chart.querySelectorAll('.pills button').forEach((b) => (b.onclick = () => { weekMetric = b.dataset.k; viewWeek() }))
   chart.querySelectorAll('.bar').forEach((g) => (g.onclick = () => { pickedDay = g.dataset.date; viewWeek() }))
   view.appendChild(chart)
 
@@ -503,31 +612,75 @@ async function viewWeek() {
   view.appendChild(el('sect',
     `<h3>${sel.date}</h3>` +
     (sel.items.length
-      ? sel.items.map((i) => `<div class="ent"><span class="n">${i.qty} × ${esc(i.name)}</span><span class="k">${i.kcal} kcal</span></div>`).join('') +
-        `<div class="row tot"><span>total</span><span>${sel.kcal} kcal · ${sel.protein_g}g protein</span></div>` +
-        macroStack(sel)
+      ? `<div class="bignum"><b>${sel.kcal}</b><span>kcal</span></div>` +
+        macroPanel(sel, r.averages) +
+        `<div style="margin-top:12px">` +
+        sel.items.map((i) => `<div class="ent"><span class="n">${qtyLabel(i.qty, i.unit)} ${esc(i.name)}</span><span class="k">${i.kcal} kcal</span></div>`).join('') +
+        `</div>`
       : '<p class="hint">Nothing logged this day.</p>')))
 }
 
+// A sparkline per macro: four small multiples sharing a form but each on its
+// own scale, which is the honest alternative to stacking different units on
+// one axis.
+function spark(days, key, color) {
+  const W = 150, H = 40
+  const vals = days.map((d) => d[key] || 0)
+  const max = Math.max(...vals, 1)
+  const bw = W / days.length
+  return `<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="${key} per day">
+    ${vals.map((v, i) => {
+      const h = v / max * (H - 4)
+      return `<rect x="${i * bw + 0.8}" y="${H - h}" width="${Math.max(1.4, bw - 1.6)}" height="${h || 1}"
+        rx="1.4" fill="${v ? color : 'var(--line)'}"></rect>`
+    }).join('')}
+  </svg>`
+}
+
+let statsSpan = 30
+
 async function viewStats() {
-  const r = await loadRange(30)
+  const r = await loadRange(statsSpan)
   view.innerHTML = ''
+
+  const spans = el('sect', `<h3>window</h3><div class="pills">` +
+    [7, 14, 30, 90].map((n) => `<button data-n="${n}" class="${n === statsSpan ? 'on' : ''}">${n} days</button>`).join('') +
+    `</div>`)
+  spans.querySelectorAll('button').forEach((b) => (b.onclick = () => { statsSpan = Number(b.dataset.n); viewStats() }))
+  view.appendChild(spans)
+
   if (!r.daysLogged) return view.appendChild(el('sect', '<h3>stats</h3><p class="hint">Nothing to summarise yet.</p>'))
 
   const a = r.averages
-  view.appendChild(el('sect', `<h3>daily average · ${r.daysLogged} days logged</h3>
-    <div class="hero">
-      <div><b>${a.kcal}</b><small>kcal</small></div>
-      <div><b>${a.protein_g}</b><small>protein g</small></div>
-      <div><b>${a.carbs_g}</b><small>carbs g</small></div>
-      <div><b>${a.fat_g}</b><small>fat g</small></div>
-      <div><b>${a.sugar_g}</b><small>sugar g</small></div>
-    </div>`))
+  const logged = r.days.filter((d) => d.items.length)
+  const kcals = logged.map((d) => d.kcal)
+  const hi = logged.reduce((m, d) => (d.kcal > m.kcal ? d : m), logged[0])
+  const lo = logged.reduce((m, d) => (d.kcal < m.kcal ? d : m), logged[0])
+
+  view.appendChild(el('sect', `<h3>daily average · ${r.daysLogged} of ${r.days.length} days logged</h3>
+    <div class="bignum"><b>${a.kcal}</b><span>kcal a day</span></div>
+    ${macroPanel(a, null)}`))
 
   view.appendChild(el('sect', `<h3>where the energy comes from</h3>${macroStack(a)}`))
 
+  view.appendChild(el('sect', `<h3>each macro, day by day</h3>
+    <div class="sm">` +
+    [['protein_g', 'protein', 'var(--protein)'], ['carbs_g', 'carbs', 'var(--carbs)'],
+     ['fat_g', 'fat', 'var(--fat)'], ['sugar_g', 'sugar', 'var(--carbs)']]
+      .map(([k, label, c]) => `<figure>
+        <figcaption><span>${label}</span><b>${a[k]}g avg</b></figcaption>
+        ${spark(r.days, k, c)}
+      </figure>`).join('') +
+    `</div>`))
+
+  view.appendChild(el('sect', `<h3>spread</h3>
+    <div class="row"><span>highest day</span><span>${hi.date} · ${hi.kcal} kcal</span></div>
+    <div class="row"><span>lowest day</span><span>${lo.date} · ${lo.kcal} kcal</span></div>
+    <div class="row"><span>range</span><span>${Math.max(...kcals) - Math.min(...kcals)} kcal</span></div>
+    <div class="row"><span>days over average</span><span>${kcals.filter((k) => k > a.kcal).length} of ${kcals.length}</span></div>`))
+
   const max = Math.max(...r.topFoods.map((f) => f.times), 1)
-  view.appendChild(el('sect', `<h3>most eaten · last 30 days</h3>` +
+  view.appendChild(el('sect', `<h3>most eaten · last ${statsSpan} days</h3>` +
     r.topFoods.map((f) => `<div class="frow">
       <span class="fn">${esc(f.name)}</span>
       <span class="fb"><i style="width:${f.times / max * 100}%"></i></span>
