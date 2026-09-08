@@ -26,10 +26,21 @@ yours to do; the code side is finished and tested against a real Postgres.
 
 You have 17 days and 151 entries in `data/log.json`. Do not lose them:
 
+Add the connection string to your local `.env` (it is gitignored):
+
+```
+DATABASE_URL=postgresql://USER:PASSWORD@ep-xxx-pooler.REGION.aws.neon.tech/neondb?sslmode=require
+```
+
+No quotes, no spaces around the `=`, all on one line. Then:
+
 ```
 cd ~/Projects/health-agent
-DATABASE_URL="postgresql://...pooler..." npm run migrate
+npm run migrate
 ```
+
+(`npm run migrate` reads `.env`. Do not use `VAR=value command` — that is bash
+syntax and fish rejects it.)
 
 Expect:
 
