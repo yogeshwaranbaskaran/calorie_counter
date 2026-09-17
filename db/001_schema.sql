@@ -1,5 +1,5 @@
 -- Plain Postgres (Neon). Run once against your database:
---   psql "$DATABASE_URL" -f db/schema.sql
+--   psql "$DATABASE_URL" -f db/001_schema.sql
 
 -- Foods are stored PER SINGLE UNIT. Quantity is applied at read time by code,
 -- never by the model. For unit 'g'/'ml' the values are per 100, the way a

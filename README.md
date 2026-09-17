@@ -35,7 +35,7 @@ Zero npm dependencies. Node 18+ for native fetch.
     api/            handlers: chat, commit, day, entry, range, insights
     public/         installable PWA, one HTML file
     cli.js          terminal front end
-    db/schema.sql   Postgres schema
+    db/001_schema.sql   Postgres schema
     src/migrate.js  copies local JSON into the database
 
 ## the rules that keep the numbers honest

@@ -319,7 +319,11 @@ const el = (cls, html) => { const d = document.createElement('div'); d.className
 const api = async (path, opts) => {
   const r = await fetch(path, { headers: headers(), ...opts })
   if (r.status === 401) { gate('wrong passcode'); throw new Error('unauthorized') }
-  return r.json()
+  const data = await r.json().catch(() => ({}))
+  // Surface the server's own message. "Couldn't reach the server" for a
+  // database error sent the user chasing the wrong problem.
+  if (!r.ok && !opts?.method) { const e = new Error(data.error || `server error ${r.status}`); e.server = true; throw e }
+  return data
 }
 
 /* ---------- dates ---------- */
@@ -811,7 +815,8 @@ async function render() {
   catch (e) {
     if (String(e.message).includes('unauthorized')) return
     view.innerHTML = ''
-    view.appendChild(el('card', '<p class="hint">Couldn\'t reach the server. Is it still running?</p>'))
+    view.appendChild(el('card', `<h3>something broke</h3><p class="hint">${esc(e.server ? e.message : "Couldn't reach the server. Is it still running?")}</p>
+      ${e.server && /does not exist/.test(e.message) ? '<p class="hint" style="margin-top:8px">That looks like a database migration that has not been run: <code>npm run db:migrate</code></p>' : ''}`))
   }
 }
 function switchTab(name) {

@@ -15,6 +15,7 @@ import auth from './api/auth.js'
 import weight from './api/weight.js'
 import targets from './api/targets.js'
 import body from './api/body.js'
+import foods from './api/foods.js'
 import { backend } from './src/store.js'
 
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), 'public')
@@ -23,6 +24,7 @@ const routes = {
   '/api/chat': chat, '/api/commit': commit, '/api/day': day,
   '/api/entry': entry, '/api/range': range, '/api/insights': insights,
   '/api/health': health, '/api/weight': weight, '/api/targets': targets, '/api/body': body,
+  '/api/foods': foods,
 }
 const MIME = {
   '.html': 'text/html; charset=utf-8', '.js': 'text/javascript', '.css': 'text/css',

@@ -8,6 +8,9 @@ const SECRET = process.env.SESSION_SECRET || ''
 const CLIENT_ID = process.env.GOOGLE_CLIENT_ID || ''
 const CLIENT_SECRET = process.env.GOOGLE_CLIENT_SECRET || ''
 const OWNER = (process.env.OWNER_EMAIL || '').toLowerCase()
+// A personal access token for the owner's own scripts (the local Suno agent).
+// Sent as `Authorization: Bearer <token>`; resolves to the OWNER_EMAIL user.
+const API_TOKEN = process.env.API_TOKEN || ''
 const SESSION_DAYS = 30
 
 export const authConfigured = () => Boolean(SECRET && CLIENT_ID && CLIENT_SECRET && usingPostgres())
@@ -163,6 +166,14 @@ export function keyForUser(user) {
 // Resolves the signed-in user for a request, or null.
 export async function currentUser(req) {
   if (!authConfigured()) return null
+  const bearer = (req.headers.authorization || '').replace(/^Bearer\s+/i, '')
+  if (bearer && API_TOKEN && OWNER && safeEqual(bearer, API_TOKEN)) {
+    const rows = await sql('select * from users where lower(email) = $1', [OWNER])
+    return rows[0] ?? null
+  }
   const id = readSession(req.headers.cookie)
   return id ? getUser(id) : null
 }
+
+const safeEqual = (a, b) =>
+  a.length === b.length && timingSafeEqual(Buffer.from(a), Buffer.from(b))

@@ -19,7 +19,7 @@ yours to do; the code side is finished and tested against a real Postgres.
    free-tier server with a small connection pool should talk to.
 
 3. Create the tables: open Neon's **SQL Editor**, paste the whole of
-   `db/schema.sql`, and Run. You should end up with two tables, `foods` and
+   `db/001_schema.sql`, and Run. You should end up with two tables, `foods` and
    `log_entries`.
 
 ## 2. Move your existing data across
