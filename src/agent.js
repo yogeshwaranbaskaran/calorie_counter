@@ -38,7 +38,9 @@ How to handle a meal the user describes:
    NEVER create a food that is a re-wording or misspelling of one you already
    have - "bread with bbutter" IS "bread with butter". Reuse the stored name.
    save_food will refuse a near duplicate and tell you which food to use.
-5. Then call log_meal with the names and quantities.
+5. Then call log_meal with the names, quantities and the meal - breakfast,
+   lunch, dinner or snack. Take it from the words if they say ("for lunch I
+   had"); otherwise from the time of day: it is currently ${new Date().getHours()}:00.
 
 Reading quantities correctly matters more than anything else here. A number
 touching a unit is NEVER a count:

@@ -140,7 +140,7 @@ export async function getLog(userId, from, to) {
     const all = await readJson('log.json', [])
     return from ? all.filter((r) => r.date >= from && r.date <= to) : all
   }
-  const cols = `id, ${DAY}, name, qty, unit, grams, kcal, protein_g, carbs_g, fat_g, sugar_g`
+  const cols = `id, ${DAY}, meal, name, qty, unit, grams, kcal, protein_g, carbs_g, fat_g, sugar_g`
   const rows = from
     ? await q(`select ${cols} from log_entries
                where user_id is not distinct from $1 and date between $2 and $3
@@ -161,9 +161,9 @@ export async function appendLog(userId, entries) {
   }
   for (const e of entries) {
     await q(
-      `insert into log_entries (user_id, date, name, qty, unit, grams, kcal, protein_g, carbs_g, fat_g, sugar_g)
-       values ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11)`,
-      [userId, e.date, e.name, e.qty, e.unit, e.grams, e.kcal, e.protein_g, e.carbs_g, e.fat_g, e.sugar_g]
+      `insert into log_entries (user_id, date, meal, name, qty, unit, grams, kcal, protein_g, carbs_g, fat_g, sugar_g)
+       values ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12)`,
+      [userId, e.date, e.meal ?? null, e.name, e.qty, e.unit, e.grams, e.kcal, e.protein_g, e.carbs_g, e.fat_g, e.sugar_g]
     )
   }
 }
@@ -182,6 +182,67 @@ export async function deleteEntry(userId, id) {
     'delete from log_entries where id = $1 and user_id is not distinct from $2 returning id',
     [id, userId])
   return rows.length > 0
+}
+
+/* ----------------------------------------------------------------- weight */
+
+export async function getWeights(userId, from, to) {
+  if (!remote) {
+    const all = await readJson('weights.json', [])
+    return (from ? all.filter((w) => w.date >= from && w.date <= to) : all)
+      .sort((a, b) => a.date.localeCompare(b.date))
+  }
+  const cols = `${DAY}, kg`
+  const rows = from
+    ? await q(`select ${cols} from weights where user_id is not distinct from $1 and date between $2 and $3 order by date`, [userId, from, to])
+    : await q(`select ${cols} from weights where user_id is not distinct from $1 order by date`, [userId])
+  return rows.map(num)
+}
+
+// One reading per day; a second weigh-in the same day replaces the first.
+export async function putWeight(userId, date, kg) {
+  if (!remote) {
+    const all = (await readJson('weights.json', [])).filter((w) => w.date !== date)
+    all.push({ date, kg })
+    return writeJson('weights.json', all)
+  }
+  await q(
+    `insert into weights (user_id, date, kg) values ($1,$2,$3)
+     on conflict (user_id, date) do update set kg = excluded.kg`,
+    [userId, date, kg])
+}
+
+export async function deleteWeight(userId, date) {
+  if (!remote) {
+    const all = await readJson('weights.json', [])
+    const kept = all.filter((w) => w.date !== date)
+    await writeJson('weights.json', kept)
+    return kept.length !== all.length
+  }
+  const rows = await q('delete from weights where user_id is not distinct from $1 and date = $2 returning id', [userId, date])
+  return rows.length > 0
+}
+
+/* ---------------------------------------------------------------- targets */
+
+const TARGET_KEYS = ['target_kcal', 'target_protein_g', 'target_carbs_g', 'target_fat_g', 'target_sugar_g', 'goal_kg', 'height_cm']
+
+export async function getTargets(userId) {
+  if (!remote || userId === null) return readJson('targets.json', {})
+  const rows = await q(`select ${TARGET_KEYS.join(', ')} from users where id = $1`, [userId])
+  return rows[0] ? num(rows[0]) : {}
+}
+
+export async function setTargets(userId, t) {
+  const clean = Object.fromEntries(TARGET_KEYS.map((k) => {
+    const v = Number(t[k])
+    return [k, Number.isFinite(v) && v > 0 ? v : null]
+  }))
+  if (!remote || userId === null) {
+    return writeJson('targets.json', { ...(await readJson('targets.json', {})), ...clean })
+  }
+  const sets = TARGET_KEYS.map((k, i) => `${k} = $${i + 2}`).join(', ')
+  await q(`update users set ${sets} where id = $1`, [userId, ...TARGET_KEYS.map((k) => clean[k])])
 }
 
 export const backend = () => (remote ? 'postgres' : 'json')

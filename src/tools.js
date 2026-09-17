@@ -49,6 +49,7 @@ export const declarations = [
       type: 'OBJECT',
       properties: {
         date: { type: S, description: 'YYYY-MM-DD, omit for today' },
+        meal: { type: S, description: 'breakfast, lunch, dinner or snack. Infer from the words ("had for lunch") or the time of day; omit only if you truly cannot tell.' },
         items: {
           type: 'ARRAY',
           items: {
@@ -166,19 +167,31 @@ export const totals = (rows) => ({
 // Turns {name, qty} pairs into real rows by reading the table. Used by the
 // agent to PROPOSE and again at commit time to RECOMPUTE - the numbers are
 // never carried across the network and trusted.
-export async function buildProposal(userId, { date, items = [] }, fallbackDate) {
+const MEALS = ['breakfast', 'lunch', 'dinner', 'snack']
+
+// When the model gives no meal and the entry is for today, the clock decides.
+// For a backfilled day the clock means nothing, so it stays unset.
+export function inferMeal(meal, day) {
+  if (MEALS.includes(meal)) return meal
+  if (day !== localDate()) return null
+  const h = new Date().getHours()
+  return h < 11 ? 'breakfast' : h < 16 ? 'lunch' : h < 22 ? 'dinner' : 'snack'
+}
+
+export async function buildProposal(userId, { date, meal, items = [] }, fallbackDate) {
   // Precedence: a date the model worked out from the sentence ("yesterday"),
   // then the day the user has selected in the UI, then today.
   const day = date || fallbackDate || localDate()
+  const slot = inferMeal(meal, day)
   const rows = []
   for (const item of items) {
     const food = await getFood(userId, item.name)
     // A missing food is a hard stop, not a guess. This is what forces the
     // model to look up and save before anything can ever be written.
     if (!food) return { error: 'unknown_food', name: item.name }
-    rows.push({ ...scale(food, Number(item.qty)), date: day })
+    rows.push({ ...scale(food, Number(item.qty)), date: day, meal: slot })
   }
-  return { date: day, rows, totals: totals(rows) }
+  return { date: day, meal: slot, rows, totals: totals(rows) }
 }
 
 // A per-unit calorie the user typed on the review card is a CORRECTION, not a
@@ -208,11 +221,11 @@ export async function applyCorrections(userId, items = []) {
   return corrected
 }
 
-export async function commitProposal(userId, { date, items }) {
+export async function commitProposal(userId, { date, meal, items }) {
   const corrected = await applyCorrections(userId, items)
   // Rebuilt AFTER the corrections land, so totals reflect the edits and are
   // still computed here rather than trusted from the client.
-  const proposal = await buildProposal(userId, { date, items })
+  const proposal = await buildProposal(userId, { date, meal, items })
   if (proposal.error) return proposal
   await appendLog(userId, proposal.rows)
   return { written: true, corrected, ...proposal }
