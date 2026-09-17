@@ -7,6 +7,8 @@ services:
     startCommand: npm start
     healthCheckPath: /api/health   # /api/day needs the passcode and would 401
     envVars:
+      - key: TZ
+        value: Asia/Tokyo    # localDate() is the server's clock; UTC would date a 07:00 breakfast to yesterday
       - key: GEMINI_API_KEY
         sync: false          # set in the Render dashboard, never in git
       - key: GEMINI_MODEL
