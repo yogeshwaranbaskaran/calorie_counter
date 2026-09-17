@@ -3,122 +3,172 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-<meta name="theme-color" content="#0e1012">
+<meta name="theme-color" content="#0b0d10">
 <meta name="mobile-web-app-capable" content="yes">
 <link rel="manifest" href="/manifest.json">
 <link rel="icon" href="/icon.svg" type="image/svg+xml">
 <title>Calorie Counter</title>
 <style>
 :root{
-  --bg:#0e1012; --surface:#17191d; --raised:#1d2026; --line:#24272c; --text:#e8eaed;
-  --muted:#8b9199; --faint:#5c626a; --accent:#7dd88f; --danger:#e07a7a;
+  --bg:#0b0d10; --surface:#14171c; --raised:#1b1f26; --line:#242931; --line2:#2e343d;
+  --text:#eef0f3; --muted:#8e96a1; --faint:#5d6570;
+  --accent:#7dd88f; --accent2:#4fb864; --warn:#e0a35c; --danger:#e07a7a;
   /* macro series - validated for this dark surface (CVD dE 9.4, normal 20.9) */
   --protein:#3987e5; --carbs:#d95926; --fat:#199e70;
-  --radius:14px;
+  --r:18px; --r2:12px;
 }
 *{box-sizing:border-box}
 html,body{height:100%}
 body{
   margin:0; background:var(--bg); color:var(--text);
-  font:15px/1.5 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;
+  font:15px/1.5 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Inter,sans-serif;
   display:flex; flex-direction:column;
   padding:env(safe-area-inset-top) env(safe-area-inset-right) 0 env(safe-area-inset-left);
+  -webkit-font-smoothing:antialiased;
 }
 h1,h2,h3,h4{margin:0}
+button{font-family:inherit}
+
+/* ---------------- top bar ---------------- */
 header{
-  display:flex; align-items:baseline; gap:9px; padding:13px 16px;
-  border-bottom:1px solid var(--line); background:var(--bg); flex:0 0 auto;
+  display:flex; align-items:center; gap:10px; padding:12px 16px 10px; flex:0 0 auto;
 }
-header b{font-size:23px; font-variant-numeric:tabular-nums; line-height:1}
-header .u{color:var(--muted); font-size:13px}
-header .sp{margin-left:auto; color:var(--muted); font-size:13px; font-variant-numeric:tabular-nums}
-#daybar{
-  display:flex; align-items:center; gap:8px; padding:8px 16px; flex:0 0 auto;
-  border-bottom:1px solid var(--line); background:var(--bg);
+header .brand{font-weight:700; font-size:16px; letter-spacing:-.01em; display:flex; align-items:center; gap:8px}
+header .brand i{width:22px; height:22px; border-radius:7px; background:linear-gradient(135deg,var(--accent),var(--accent2)); display:block}
+.acct{
+  margin-left:auto; display:flex; align-items:center; gap:7px; background:var(--surface); border:1px solid var(--line);
+  cursor:pointer; padding:4px 10px 4px 4px; color:var(--muted); font-size:12.5px; border-radius:999px;
 }
+.acct img{width:24px; height:24px; border-radius:50%}
+.acct svg{width:16px; height:16px; margin:4px}
+
+#daybar{display:flex; align-items:center; gap:8px; padding:0 16px 10px; flex:0 0 auto}
 #daybar button{
-  background:none; border:1px solid var(--line); color:var(--text); cursor:pointer;
-  border-radius:8px; width:30px; height:30px; font-size:17px; line-height:1; padding:0;
+  background:var(--surface); border:1px solid var(--line); color:var(--text); cursor:pointer;
+  border-radius:10px; width:34px; height:34px; font-size:18px; line-height:1; padding:0;
 }
 #daybar button:disabled{opacity:.3; cursor:default}
 #daybar input[type=date]{
-  flex:0 1 auto; width:auto; padding:5px 9px; font-size:14px; border-radius:8px;
+  padding:6px 10px; font-size:14px; border-radius:10px; height:34px;
   border:1px solid var(--line); background:var(--surface); color:var(--text);
   font-family:inherit; color-scheme:dark;
 }
-#daytag{font-size:12px; color:var(--faint); margin-left:auto}
+#daytag{font-size:12.5px; color:var(--muted); margin-left:auto; text-align:right; line-height:1.25}
+#daytag b{display:block; color:var(--text); font-weight:600}
 #daybar.past input[type=date]{border-color:var(--accent); color:var(--accent)}
-#daybar.past #daytag{color:var(--accent)}
-main{flex:1; overflow-y:auto; padding:16px; display:flex; flex-direction:column; gap:14px; min-height:0}
 
-.sect{background:var(--surface); border:1px solid var(--line); border-radius:var(--radius); padding:14px}
-.sect > h3, .lbl{
-  font-size:11px; color:var(--faint); font-weight:600;
-  letter-spacing:.06em; text-transform:uppercase; margin-bottom:10px;
+main{flex:1; overflow-y:auto; padding:4px 16px 16px; display:flex; flex-direction:column; gap:14px; min-height:0}
+
+/* ---------------- cards ---------------- */
+.card{background:var(--surface); border:1px solid var(--line); border-radius:var(--r); padding:16px}
+.card.hero{
+  background:linear-gradient(160deg,#171c22 0%, #12151a 60%, #0f1216 100%);
+  border-color:var(--line2);
 }
+.card > h3, .lbl{
+  font-size:11px; color:var(--faint); font-weight:700; letter-spacing:.08em; text-transform:uppercase; margin-bottom:12px;
+}
+.card > h3 .r{float:right; color:var(--faint); font-weight:500; letter-spacing:0; text-transform:none; font-size:12px}
 .hint{color:var(--muted); font-size:13.5px; margin:0}
+.row{display:flex; justify-content:space-between; gap:12px; padding:6px 0; font-variant-numeric:tabular-nums}
+.row span:last-child{color:var(--muted); white-space:nowrap; font-size:13px}
+.tot{border-top:1px solid var(--line); margin-top:8px; padding-top:10px; font-weight:600}
+.tot span:last-child{color:var(--text)}
+.acts{display:flex; gap:8px; margin-top:14px}
+.b{
+  flex:1; padding:12px; border-radius:var(--r2); border:1px solid var(--line2);
+  background:var(--raised); color:var(--text); font-size:15px; font-weight:600; cursor:pointer;
+}
+.b.go{background:var(--accent); color:#0b0d10; border-color:var(--accent)}
+.b:disabled{opacity:.4}
+.pills{display:flex; gap:6px; flex-wrap:wrap; margin-bottom:12px}
+.pills button{
+  background:var(--raised); border:1px solid var(--line); color:var(--muted);
+  border-radius:999px; padding:6px 12px; font-size:12.5px; cursor:pointer;
+}
+.pills button.on{background:var(--accent); border-color:var(--accent); color:#0b0d10; font-weight:600}
 
-/* ---------- empty / intro ---------- */
+/* ---------------- ring hero ---------------- */
+.ringwrap{display:flex; align-items:center; gap:18px}
+.ring{position:relative; width:138px; height:138px; flex:0 0 auto}
+.ring svg{width:100%; height:100%; transform:rotate(-90deg)}
+.ring circle{fill:none; stroke-width:10; stroke-linecap:round}
+.ring .track{stroke:var(--raised)}
+.ring .fill{stroke:var(--accent); transition:stroke-dasharray .6s ease}
+.ring .fill.over{stroke:var(--warn)}
+.ring .c{position:absolute; inset:0; display:flex; flex-direction:column; align-items:center; justify-content:center; line-height:1.1}
+.ring .c b{font-size:30px; font-variant-numeric:tabular-nums; letter-spacing:-.02em}
+.ring .c small{font-size:11px; color:var(--muted); margin-top:3px}
+.ringside{flex:1; min-width:0}
+.ringside .kv{display:flex; justify-content:space-between; font-size:13px; color:var(--muted); padding:5px 0; border-bottom:1px solid var(--line)}
+.ringside .kv:last-child{border-bottom:0}
+.ringside .kv b{color:var(--text); font-variant-numeric:tabular-nums}
+
+/* ---------------- macro bars ---------------- */
+.mrow{display:flex; align-items:center; gap:10px; padding:6px 0; font-size:13.5px}
+.mrow .ml{width:56px; color:var(--muted); flex:0 0 auto}
+.mrow .mt{flex:1; height:8px; background:var(--raised); border-radius:5px; position:relative; overflow:hidden}
+.mrow .mt i{display:block; height:100%; border-radius:5px; transition:width .5s ease}
+.mrow .mt u{position:absolute; top:-3px; bottom:-3px; width:2px; background:var(--faint); text-decoration:none}
+.mrow .mv{width:88px; text-align:right; flex:0 0 auto; font-variant-numeric:tabular-nums}
+.mrow .mv small{color:var(--faint); font-size:11px}
+
+/* ---------------- meals ---------------- */
+.meal{border-top:1px solid var(--line); padding-top:10px; margin-top:10px}
+.meal:first-of-type{border-top:0; padding-top:0; margin-top:0}
+.meal h4{display:flex; align-items:center; gap:8px; font-size:13px; font-weight:600; margin-bottom:4px}
+.meal h4 svg{width:15px; height:15px; color:var(--muted)}
+.meal h4 .mk{margin-left:auto; color:var(--muted); font-weight:500; font-size:12.5px; font-variant-numeric:tabular-nums}
+.ent{display:flex; align-items:center; gap:10px; padding:6px 0 6px 23px; font-variant-numeric:tabular-nums; font-size:14.5px}
+.ent .n{flex:1; overflow:hidden; text-overflow:ellipsis; white-space:nowrap}
+.ent .k{color:var(--muted); font-size:13px}
+.ent .x{background:none; border:0; color:var(--faint); font-size:18px; line-height:1; padding:2px 5px; cursor:pointer}
+.ent .x:active{color:var(--danger)}
+
+/* ---------------- intro ---------------- */
 .intro{margin:auto 0; padding:8px 2px}
-.intro h1{font-size:19px; margin-bottom:6px; font-weight:600}
+.intro h1{font-size:22px; margin-bottom:6px; font-weight:700; letter-spacing:-.01em}
 .intro p{margin:0 0 18px; color:var(--muted); font-size:14px; max-width:34ch}
 .eg{
-  display:block; width:100%; text-align:left; margin-bottom:7px; padding:11px 13px;
-  background:var(--surface); border:1px solid var(--line); border-radius:11px;
+  display:block; width:100%; text-align:left; margin-bottom:8px; padding:12px 14px;
+  background:var(--surface); border:1px solid var(--line); border-radius:var(--r2);
   color:var(--text); font:inherit; cursor:pointer;
 }
 .eg:active{border-color:var(--muted)}
 
-/* ---------- entries ---------- */
-.ent{display:flex; align-items:center; gap:10px; padding:7px 2px; font-variant-numeric:tabular-nums}
-.ent .n{flex:1; overflow:hidden; text-overflow:ellipsis; white-space:nowrap}
-.ent .k{color:var(--muted); font-size:13px}
-.ent .x{background:none; border:0; color:var(--faint); font-size:17px; line-height:1; padding:2px 5px; cursor:pointer}
-.ent .x:active{color:var(--danger)}
-
-/* ---------- chat ---------- */
-.msg{max-width:88%; padding:10px 13px; border-radius:var(--radius); white-space:pre-wrap; word-wrap:break-word}
-.me{align-self:flex-end; background:#243043; border-bottom-right-radius:4px}
-.bot{align-self:flex-start; background:var(--surface); border-bottom-left-radius:4px}
+/* ---------------- chat ---------------- */
+.msg{max-width:88%; padding:10px 14px; border-radius:var(--r); white-space:pre-wrap; word-wrap:break-word}
+.me{align-self:flex-end; background:#24303f; border-bottom-right-radius:5px}
+.bot{align-self:flex-start; background:var(--surface); border:1px solid var(--line); border-bottom-left-radius:5px}
 .tools{align-self:flex-start; color:var(--faint); font-size:12px; font-family:ui-monospace,monospace}
 .err{align-self:flex-start; color:var(--danger); font-size:13px}
+.banner{
+  background:var(--raised); border:1px solid var(--line); border-left:3px solid var(--warn);
+  border-radius:var(--r2); padding:10px 12px; font-size:13px; color:var(--muted);
+}
+.banner b{color:var(--text)}
 
-/* ---------- editable proposal ---------- */
-.prow{padding:9px 0; border-bottom:1px solid var(--line)}
+/* ---------------- editable proposal ---------------- */
+.prow{padding:10px 0; border-bottom:1px solid var(--line)}
 .prow:last-child{border-bottom:0}
-/* Name on its own line: at 390px there is no room for a name plus two inputs
-   plus a total, and truncating the food to "cream..." defeats the review. */
 .prow .pn{display:block; margin-bottom:6px; font-size:14.5px}
 .prow .pctl{display:flex; align-items:center; gap:6px}
 .prow input{
-  width:62px; flex:0 0 auto; padding:6px 8px; font-size:15px; text-align:right;
-  border-radius:8px; border:1px solid var(--line); background:var(--raised);
+  width:64px; flex:0 0 auto; padding:7px 8px; font-size:15px; text-align:right;
+  border-radius:9px; border:1px solid var(--line2); background:var(--raised);
   color:var(--text); font-family:inherit; font-variant-numeric:tabular-nums;
 }
 .prow input:focus{outline:none; border-color:var(--accent)}
 .prow .unit{color:var(--faint); font-size:11.5px; flex:0 0 auto}
-.prow .sub{color:var(--text); font-size:13.5px; margin-left:auto; flex:0 0 auto;
-  font-variant-numeric:tabular-nums}
-.prow .drop{background:none; border:0; color:var(--faint); font-size:18px; cursor:pointer;
-  padding:2px 2px 2px 8px; flex:0 0 auto}
-.prow .drop:active{color:var(--danger)}
+.prow .sub{color:var(--text); font-size:13.5px; margin-left:auto; flex:0 0 auto; font-variant-numeric:tabular-nums}
+.prow .drop{background:none; border:0; color:var(--faint); font-size:18px; cursor:pointer; padding:2px 2px 2px 8px}
 .edited{color:var(--accent); font-size:12px; margin-top:9px}
+.mealpick{display:flex; gap:6px; margin:4px 0 8px; flex-wrap:wrap}
+.mealpick button{background:var(--raised); border:1px solid var(--line); color:var(--muted); border-radius:999px; padding:4px 10px; font-size:12px; cursor:pointer}
+.mealpick button.on{border-color:var(--accent); color:var(--accent)}
 
-/* ---------- proposal ---------- */
-.row{display:flex; justify-content:space-between; gap:12px; padding:5px 0; font-variant-numeric:tabular-nums}
-.row span:last-child{color:var(--muted); white-space:nowrap; font-size:13px}
-.tot{border-top:1px solid var(--line); margin-top:8px; padding-top:10px; font-weight:600}
-.tot span:last-child{color:var(--text)}
-.acts{display:flex; gap:8px; margin-top:13px}
-button.b{
-  flex:1; padding:11px; border-radius:10px; border:1px solid var(--line);
-  background:transparent; color:var(--text); font-size:15px; font-weight:600; cursor:pointer; font-family:inherit;
-}
-button.go{background:var(--accent); color:#0e1012; border-color:var(--accent)}
-button.b:disabled{opacity:.4}
-
-/* ---------- charts ---------- */
-svg{display:block; width:100%; height:auto; overflow:visible}
+/* ---------------- charts ---------------- */
+svg.chart{display:block; width:100%; height:auto; overflow:visible}
 .bar{cursor:pointer}
 .bar rect.hit{fill:transparent}
 .axis{font-size:10px; fill:var(--faint)}
@@ -126,114 +176,100 @@ svg{display:block; width:100%; height:auto; overflow:visible}
 .vlabel{font-size:10.5px; fill:var(--muted); font-variant-numeric:tabular-nums}
 .gridline{stroke:var(--line); stroke-width:1}
 .avgline{stroke:var(--faint); stroke-width:1; stroke-dasharray:3 3}
-
+.goalline{stroke:var(--accent); stroke-width:1; stroke-dasharray:4 3; opacity:.7}
 .legend{display:flex; flex-wrap:wrap; gap:14px; margin-top:11px}
 .legend div{display:flex; align-items:center; gap:6px; font-size:12.5px; color:var(--muted)}
 .legend i{width:9px; height:9px; border-radius:2px; display:block}
-
-.stack{display:flex; gap:2px; height:26px; border-radius:5px; overflow:hidden; margin-top:2px}
+.stack{display:flex; gap:2px; height:24px; border-radius:6px; overflow:hidden; margin-top:2px}
 .stack span{display:block}
-
-.hero{display:flex; gap:22px; flex-wrap:wrap}
-.hero div{min-width:74px}
-.hero b{display:block; font-size:24px; font-variant-numeric:tabular-nums; line-height:1.2}
-.hero small{color:var(--faint); font-size:11.5px; text-transform:uppercase; letter-spacing:.05em}
-
+.sm{display:grid; grid-template-columns:1fr 1fr; gap:14px}
+.sm figure{margin:0}
+.sm figcaption{font-size:11.5px; color:var(--muted); margin-bottom:3px; display:flex; justify-content:space-between}
+.sm figcaption b{color:var(--text); font-weight:600; font-variant-numeric:tabular-nums}
 .frow{display:flex; align-items:center; gap:10px; padding:5px 0; font-size:14px}
 .frow .fn{width:38%; overflow:hidden; text-overflow:ellipsis; white-space:nowrap}
 .frow .fb{flex:1; height:8px; background:var(--raised); border-radius:4px; overflow:hidden}
 .frow .fb i{display:block; height:100%; background:var(--accent); border-radius:4px}
 .frow .fc{color:var(--muted); font-size:12.5px; font-variant-numeric:tabular-nums; width:52px; text-align:right}
-
-/* ---------- macro panel ---------- */
-.mrow{display:flex; align-items:center; gap:10px; padding:6px 0; font-size:13.5px}
-.mrow .ml{width:58px; color:var(--muted); flex:0 0 auto}
-.mrow .mt{flex:1; height:9px; background:var(--raised); border-radius:5px; position:relative; overflow:hidden}
-.mrow .mt i{display:block; height:100%; border-radius:5px}
-.mrow .mt u{position:absolute; top:-3px; bottom:-3px; width:2px; background:var(--faint); text-decoration:none}
-.mrow .mv{width:76px; text-align:right; flex:0 0 auto; font-variant-numeric:tabular-nums}
-.mrow .mv small{color:var(--faint); font-size:11px}
-
 .bignum{display:flex; align-items:baseline; gap:9px; margin-bottom:4px}
-.bignum b{font-size:34px; line-height:1; font-variant-numeric:tabular-nums}
+.bignum b{font-size:34px; line-height:1; font-variant-numeric:tabular-nums; letter-spacing:-.02em}
 .bignum span{color:var(--muted); font-size:13px}
 .bignum .delta{margin-left:auto; font-size:12px; color:var(--faint)}
+.stat3{display:grid; grid-template-columns:repeat(3,1fr); gap:10px}
+.stat3 div{background:var(--raised); border-radius:var(--r2); padding:10px 12px}
+.stat3 b{display:block; font-size:20px; font-variant-numeric:tabular-nums; letter-spacing:-.01em}
+.stat3 small{color:var(--faint); font-size:11px; text-transform:uppercase; letter-spacing:.05em}
+.stat3 .down{color:var(--accent)} .stat3 .up{color:var(--warn)}
 
-/* ---------- metric switcher ---------- */
-.pills{display:flex; gap:6px; flex-wrap:wrap; margin-bottom:12px}
-.pills button{
-  background:var(--raised); border:1px solid var(--line); color:var(--muted);
-  border-radius:999px; padding:5px 11px; font:inherit; font-size:12.5px; cursor:pointer;
+/* ---------------- weight entry ---------------- */
+.wform{display:flex; gap:8px; align-items:center}
+.wform input{
+  flex:1; padding:12px 14px; font-size:20px; text-align:center; border-radius:var(--r2);
+  border:1px solid var(--line2); background:var(--raised); color:var(--text); font-family:inherit;
+  font-variant-numeric:tabular-nums;
 }
-.pills button.on{background:var(--accent); border-color:var(--accent); color:#0e1012; font-weight:600}
+.wform input:focus{outline:none; border-color:var(--accent)}
+.wform .b{flex:0 0 auto; padding:12px 18px}
 
-/* ---------- small multiples ---------- */
-.sm{display:grid; grid-template-columns:1fr 1fr; gap:14px}
-.sm figure{margin:0}
-.sm figcaption{font-size:11.5px; color:var(--muted); margin-bottom:3px; display:flex; justify-content:space-between}
-.sm figcaption b{color:var(--text); font-weight:600; font-variant-numeric:tabular-nums}
+/* ---------------- settings ---------------- */
+.field{margin-bottom:12px}
+.field label{display:block; font-size:12px; color:var(--muted); margin-bottom:5px}
+.field input{
+  width:100%; padding:11px 12px; font-size:16px; border-radius:var(--r2);
+  border:1px solid var(--line2); background:var(--raised); color:var(--text); font-family:inherit;
+}
+.field input:focus{outline:none; border-color:var(--accent)}
+.grid2{display:grid; grid-template-columns:1fr 1fr; gap:10px}
 
-/* ---------- insight cards ---------- */
-.ins{border-left:3px solid var(--line); padding:2px 0 2px 12px; margin-bottom:14px}
-.ins.up{border-color:var(--fat)}
-.ins.down{border-color:var(--carbs)}
-.ins.note{border-color:var(--faint)}
-.ins h4{font-size:11px; color:var(--faint); font-weight:600; letter-spacing:.06em; text-transform:uppercase; margin-bottom:3px}
+/* ---------------- insight cards ---------------- */
+.ins{border-left:3px solid var(--line2); padding:2px 0 2px 12px; margin-bottom:14px}
+.ins.up{border-color:var(--fat)} .ins.down{border-color:var(--carbs)} .ins.note{border-color:var(--faint)}
+.ins h4{font-size:11px; color:var(--faint); font-weight:700; letter-spacing:.08em; text-transform:uppercase; margin-bottom:3px}
 .ins p{margin:0; font-size:14.5px}
 
-/* ---------- chrome ---------- */
+/* ---------------- chrome ---------------- */
 footer{padding:10px 12px; border-top:1px solid var(--line); display:flex; gap:8px; background:var(--bg); flex:0 0 auto}
-input{
-  flex:1; padding:12px 14px; border-radius:12px; border:1px solid var(--line);
+input#say{
+  flex:1; padding:12px 14px; border-radius:var(--r2); border:1px solid var(--line2);
   background:var(--surface); color:var(--text); font-size:16px; font-family:inherit;
 }
-input::placeholder{color:var(--faint)}
-input:focus{outline:none; border-color:var(--muted)}
-#send{flex:0 0 auto; padding:11px 17px; font-size:17px}
+input#say::placeholder{color:var(--faint)}
+input#say:focus{outline:none; border-color:var(--accent)}
+#send{flex:0 0 auto; width:46px; padding:0; display:flex; align-items:center; justify-content:center}
+#send svg{width:20px; height:20px}
 nav{
   display:flex; border-top:1px solid var(--line); background:var(--bg); flex:0 0 auto;
   padding-bottom:env(safe-area-inset-bottom);
 }
 nav button{
-  flex:1; padding:11px 4px 12px; background:none; border:0; cursor:pointer;
-  color:var(--faint); font:inherit; font-size:12px; border-top:2px solid transparent; margin-top:-1px;
+  flex:1; padding:9px 4px 10px; background:none; border:0; cursor:pointer;
+  color:var(--faint); font:inherit; font-size:11px; display:flex; flex-direction:column; align-items:center; gap:3px;
 }
-nav button.on{color:var(--text); border-top-color:var(--accent)}
-.gate{margin:auto; padding:26px 22px; max-width:360px; width:100%}
-.gate h2{font-size:22px; margin-bottom:6px}
+nav button svg{width:22px; height:22px}
+nav button.on{color:var(--accent)}
+
+/* ---------------- auth screens ---------------- */
+.gate{margin:auto; padding:26px 22px; max-width:380px; width:100%}
+.gate h2{font-size:24px; margin-bottom:6px; letter-spacing:-.01em}
 .gate p{color:var(--muted); font-size:14px; margin:0 0 20px}
 .gate input{width:100%; margin:6px 0 2px}
 .gsi{
   display:flex; align-items:center; justify-content:center; gap:10px; width:100%;
-  padding:12px; border-radius:11px; border:1px solid var(--line); background:#fff;
+  padding:13px; border-radius:var(--r2); border:1px solid var(--line); background:#fff;
   color:#1f1f1f; font:inherit; font-size:15px; font-weight:600; cursor:pointer; text-decoration:none;
 }
 .gsi svg{width:18px; height:18px}
-.plan{
-  border:1px solid var(--line); border-radius:12px; padding:14px; margin-bottom:10px;
-  cursor:pointer; background:var(--surface);
-}
+.plan{border:1px solid var(--line); border-radius:var(--r2); padding:14px; margin-bottom:10px; cursor:pointer; background:var(--surface)}
 .plan.sel{border-color:var(--accent)}
 .plan h4{font-size:15px; margin-bottom:3px}
 .plan .tag{float:right; font-size:11px; color:var(--accent); text-transform:uppercase; letter-spacing:.05em}
 .plan p{font-size:13px; color:var(--muted); margin:0}
-.banner{
-  background:var(--raised); border:1px solid var(--line); border-left:3px solid var(--warn, #e0a35c);
-  border-radius:10px; padding:10px 12px; font-size:13px; color:var(--muted);
-}
-.banner b{color:var(--text)}
-.acct{
-  margin-left:auto; display:flex; align-items:center; gap:7px; background:none; border:0;
-  cursor:pointer; padding:2px; color:var(--muted); font:inherit; font-size:12px;
-}
-.acct img{width:26px; height:26px; border-radius:50%}
 </style>
 </head>
 <body>
 <header>
-  <b id="kcal">0</b><span class="u">kcal today</span>
-  <span class="sp" id="protein"></span>
-  <button class="acct" id="acct" hidden></button>
+  <div class="brand"><i></i>Calorie Counter</div>
+  <button class="acct" id="acct" title="settings"></button>
 </header>
 
 <div id="daybar">
@@ -247,46 +283,38 @@ nav button.on{color:var(--text); border-top-color:var(--accent)}
 
 <footer id="bar">
   <input id="say" placeholder="what did you eat?" autocomplete="off" enterkeyhint="send">
-  <button class="b" id="send">→</button>
+  <button class="b go" id="send" aria-label="send">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M13 5l7 7-7 7"/></svg>
+  </button>
 </footer>
 
 <nav>
-  <button data-tab="log" class="on">Log</button>
-  <button data-tab="week">Week</button>
-  <button data-tab="stats">Stats</button>
-  <button data-tab="insights">Insights</button>
+  <button data-tab="log" class="on">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M4 3v18M4 12c0-5 2-9 4-9v18M15 3v18M15 12h4V3a4 4 0 0 0-4 0z"/></svg>Log</button>
+  <button data-tab="trends">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 17l6-6 4 4 8-8M15 7h6v6"/></svg>Trends</button>
+  <button data-tab="body">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l8 4v5c0 5-3.5 8-8 9-4.5-1-8-4-8-9V7l8-4z"/><path d="M9 12l2 2 4-4"/></svg>Body</button>
+  <button data-tab="insights">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l1.8 5.2L19 10l-5.2 1.8L12 17l-1.8-5.2L5 10l5.2-1.8z"/><path d="M19 17l.7 2 2 .7-2 .7-.7 2-.7-2-2-.7 2-.7z"/></svg>Insights</button>
 </nav>
 
 <script type="module">
+/* ===================================================================== state */
 const $ = (id) => document.getElementById(id)
 const view = $('view')
 let tab = 'log'
 let history = []
-let chat = []            // rendered chat nodes, kept across tab switches
+let chat = []
+let me = null
 let pass = localStorage.getItem('passcode') || ''
-
-// The selected day drives BOTH what you are looking at and what a new entry is
-// logged into, so backfilling old days needs no special mode.
-const isoToday = () => {
-  const d = new Date(), p = (n) => String(n).padStart(2, '0')
-  return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())}`
-}
-const shiftIso = (iso, by) => {
-  const [y, m, d] = iso.split('-').map(Number)
-  const t = new Date(y, m - 1, d + by), p = (n) => String(n).padStart(2, '0')
-  return `${t.getFullYear()}-${p(t.getMonth() + 1)}-${p(t.getDate())}`
-}
-let logDate = isoToday()
+const cache = { day: null, range: null, body: null, insights: null }
+let pickedDay = null
 
 const headers = () => ({ 'content-type': 'application/json', 'x-passcode': pass })
-// Session is a cookie, so nothing extra is needed for signed-in requests.
 const esc = (s) => String(s).replace(/[<>&"]/g, (c) => ({ '<': '&lt;', '>': '&gt;', '&': '&amp;', '"': '&quot;' }[c]))
-// "250 x rice" reads as 250 servings. A weight belongs against its unit.
-// Display only. Stored names stay lowercase so lookups keep matching - this
-// capitalises the first letter at render time, not in the table.
 const cap = (t) => { const x = String(t); return x.charAt(0).toUpperCase() + x.slice(1) }
-const qtyLabel = (qty, unit) =>
-  ['g', 'ml'].includes(String(unit).toLowerCase()) ? `${qty}${unit}` : `${qty} ×`
+const qtyLabel = (qty, unit) => ['g', 'ml'].includes(String(unit).toLowerCase()) ? `${qty}${unit}` : `${qty} ×`
 const el = (cls, html) => { const d = document.createElement('div'); d.className = cls; if (html != null) d.innerHTML = html; return d }
 const api = async (path, opts) => {
   const r = await fetch(path, { headers: headers(), ...opts })
@@ -294,10 +322,178 @@ const api = async (path, opts) => {
   return r.json()
 }
 
-/* ============================================================ LOG ======= */
+/* ---------- dates ---------- */
+const isoToday = () => { const d = new Date(), p = (n) => String(n).padStart(2, '0'); return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())}` }
+const shiftIso = (iso, by) => { const [y, m, d] = iso.split('-').map(Number); const t = new Date(y, m - 1, d + by), p = (n) => String(n).padStart(2, '0'); return `${t.getFullYear()}-${p(t.getMonth() + 1)}-${p(t.getDate())}` }
+const asDate = (iso) => { const [y, m, d] = iso.split('-').map(Number); return new Date(y, m - 1, d) }
+const DOW = ['S', 'M', 'T', 'W', 'T', 'F', 'S']
+const DAYS_FULL = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday']
+const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']
+const dayName = (iso) => DAYS_FULL[asDate(iso).getDay()]
+const shortDate = (iso) => `${asDate(iso).getDate()} ${MONTHS[asDate(iso).getMonth()]}`
+const prettyDate = (iso) => {
+  const rel = iso === isoToday() ? 'Today' : iso === shiftIso(isoToday(), -1) ? 'Yesterday' : null
+  const base = `${dayName(iso)}, ${shortDate(iso)}`
+  return rel ? `${rel} · ${base}` : base
+}
+let logDate = isoToday()
 
+/* ================================================================ macros */
+const MACROS = [
+  { k: 'protein_g', t: 'target_protein_g', label: 'protein', v: 'protein', kcalPerG: 4 },
+  { k: 'carbs_g',   t: 'target_carbs_g',   label: 'carbs',   v: 'carbs',   kcalPerG: 4 },
+  { k: 'fat_g',     t: 'target_fat_g',     label: 'fat',     v: 'fat',     kcalPerG: 9 },
+  { k: 'sugar_g',   t: 'target_sugar_g',   label: 'sugar',   v: 'carbs',   kcalPerG: 4, sub: true },
+]
+
+// Bars fill toward the TARGET when one is set, else toward the user's own
+// average - no invented daily numbers.
+function macroPanel(totals, targets = {}, avg = null) {
+  const energy = MACROS.filter((m) => !m.sub).reduce((t, m) => t + (totals[m.k] || 0) * m.kcalPerG, 0)
+  return MACROS.map((m) => {
+    const g = totals[m.k] || 0
+    const target = targets?.[m.t] || 0
+    const ref = target || avg?.[m.k] || 0
+    const top = ref ? ref * 1.15 : Math.max(g, 1) * 1.25
+    const pct = energy && !m.sub ? Math.round((g * m.kcalPerG / energy) * 100) : null
+    // Exceeding protein is the point, not a problem - only the others warn.
+    const over = target && g > target * 1.05 && m.k !== 'protein_g'
+    return `<div class="mrow">
+      <span class="ml">${m.label}</span>
+      <span class="mt">
+        <i style="width:${Math.min(100, g / top * 100)}%;background:${over ? 'var(--warn)' : `var(--${m.v})`};${m.sub ? 'opacity:.6' : ''}"></i>
+        ${ref ? `<u style="left:${Math.min(99, ref / top * 100)}%"></u>` : ''}
+      </span>
+      <span class="mv">${Math.round(g)}${target ? `<small>/${Math.round(target)}g</small>` : 'g'}${pct !== null && !target ? ` <small>${pct}%</small>` : ''}</span>
+    </div>`
+  }).join('')
+}
+
+/* ================================================================== ring */
+function ringHero(d) {
+  const target = d.targets?.target_kcal || 0
+  const eaten = d.totals.kcal || 0
+  const R = 60, C = 2 * Math.PI * R
+  const frac = target ? Math.min(1, eaten / target) : 0
+  const left = target ? Math.round(target - eaten) : null
+  const over = target && eaten > target
+  const center = target
+    ? `<b>${Math.abs(left)}</b><small>${over ? 'over target' : `left of ${Math.round(target)}`}</small>`
+    : `<b>${eaten}</b><small>kcal · no target</small>`
+  const p = d.totals.protein_g || 0, pt = d.targets?.target_protein_g || 0
+  return `<div class="ringwrap">
+    <div class="ring">
+      <svg viewBox="0 0 140 140">
+        <circle class="track" cx="70" cy="70" r="${R}"></circle>
+        <circle class="fill ${over ? 'over' : ''}" cx="70" cy="70" r="${R}"
+          stroke-dasharray="${(frac * C).toFixed(1)} ${C.toFixed(1)}"></circle>
+      </svg>
+      <div class="c">${center}</div>
+    </div>
+    <div class="ringside">
+      <div class="kv"><span>eaten</span><b>${eaten} kcal</b></div>
+      <div class="kv"><span>protein</span><b>${Math.round(p)}g${pt ? ` <span style="color:var(--faint)">/ ${Math.round(pt)}</span>` : ''}</b></div>
+      <div class="kv"><span>${target ? 'target' : 'set a target'}</span><b>${target ? `${Math.round(target)} kcal` : `<a href="#" id="setT" style="color:var(--accent)">settings →</a>`}</b></div>
+    </div>
+  </div>`
+}
+
+/* ================================================================= meals */
+const MEAL_ORDER = ['breakfast', 'lunch', 'dinner', 'snack', null]
+const MEAL_ICON = {
+  breakfast: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M2 12h2M20 12h2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/></svg>',
+  lunch: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M3 11h18a9 9 0 0 1-18 0zM3 11a9 9 0 0 1 18 0"/><path d="M12 2v2"/></svg>',
+  dinner: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M21 13A9 9 0 1 1 11 3a7 7 0 0 0 10 10z"/></svg>',
+  snack: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M12 3c3 0 5 2 5 5 0 5-5 13-5 13S7 13 7 8c0-3 2-5 5-5z"/></svg>',
+  null: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="9"/><path d="M12 8v4l3 2"/></svg>',
+}
+
+function mealGroups(rows, editable = true) {
+  const groups = {}
+  for (const r of rows) (groups[r.meal ?? null] ??= []).push(r)
+  return MEAL_ORDER.filter((m) => groups[m]?.length).map((m) => {
+    const list = groups[m]
+    const kcal = list.reduce((t, r) => t + (r.kcal || 0), 0)
+    return `<div class="meal">
+      <h4>${MEAL_ICON[m]}${m ? cap(m) : 'Unsorted'}<span class="mk">${kcal} kcal</span></h4>
+      ${list.map((r) => `<div class="ent" data-id="${r.id}">
+        <span class="n">${qtyLabel(r.qty, r.unit)} ${esc(cap(r.name))}</span>
+        <span class="k">${r.kcal} kcal</span>
+        ${editable ? '<button class="x" title="remove">×</button>' : ''}
+      </div>`).join('')}
+    </div>`
+  }).join('')
+}
+
+/* ============================================================== charts */
+function weekChart(days, avg, metric, picked, color) {
+  const W = 320, H = 150, PAD_B = 22, PAD_T = 14
+  const max = Math.max(...days.map((d) => d[metric] || 0), avg, 1)
+  const scale = (v) => (H - PAD_B - PAD_T) * (v / max)
+  const bw = W / days.length, inner = bw - 6
+  const bars = days.map((d, i) => {
+    const value = d[metric] || 0, h = scale(value), x = i * bw + 3, y = H - PAD_B - h, on = d.date === picked
+    return `<g class="bar" data-date="${d.date}">
+      <rect class="hit" x="${i * bw}" y="0" width="${bw}" height="${H}"></rect>
+      ${value ? `<rect x="${x}" y="${y}" width="${inner}" height="${h}" rx="4" fill="${on ? 'var(--accent)' : color}"></rect>`
+              : `<rect x="${x}" y="${H - PAD_B - 3}" width="${inner}" height="3" rx="1.5" fill="var(--line)"></rect>`}
+      ${days.length <= 14 ? `<text class="axis ${on ? 'on' : ''}" x="${x + inner / 2}" y="${H - 8}" text-anchor="middle">${DOW[asDate(d.date).getDay()]}</text>` : ''}
+      ${on && value ? `<text class="vlabel" x="${x + inner / 2}" y="${y - 5}" text-anchor="middle">${Math.round(value)}</text>` : ''}
+    </g>`
+  }).join('')
+  const ay = H - PAD_B - scale(avg)
+  return `<svg class="chart" viewBox="0 0 ${W} ${H}" role="img">
+    <line class="gridline" x1="0" y1="${H - PAD_B}" x2="${W}" y2="${H - PAD_B}"></line>
+    ${avg ? `<line class="avgline" x1="0" y1="${ay}" x2="${W}" y2="${ay}"></line>` : ''}
+    ${bars}</svg>`
+}
+
+function macroStack(t) {
+  const parts = [
+    { k: 'protein', label: 'protein', kcal: (t.protein_g || 0) * 4, v: t.protein_g },
+    { k: 'carbs', label: 'carbs', kcal: (t.carbs_g || 0) * 4, v: t.carbs_g },
+    { k: 'fat', label: 'fat', kcal: (t.fat_g || 0) * 9, v: t.fat_g },
+  ]
+  const sum = parts.reduce((a, p) => a + p.kcal, 0)
+  if (!sum) return '<p class="hint">No macros recorded yet.</p>'
+  return `<div class="stack">${parts.map((p) => `<span style="flex:${p.kcal};background:var(--${p.k})"></span>`).join('')}</div>
+    <div class="legend">${parts.map((p) => `<div><i style="background:var(--${p.k})"></i>${p.label} ${Math.round(p.v)}g · ${Math.round(p.kcal / sum * 100)}%</div>`).join('')}</div>`
+}
+
+function spark(days, key, color) {
+  const W = 150, H = 40
+  const vals = days.map((d) => d[key] || 0), max = Math.max(...vals, 1), bw = W / days.length
+  return `<svg class="chart" viewBox="0 0 ${W} ${H}">${vals.map((v, i) => {
+    const h = v / max * (H - 4)
+    return `<rect x="${i * bw + 0.8}" y="${H - h}" width="${Math.max(1.4, bw - 1.6)}" height="${h || 1}" rx="1.4" fill="${v ? color : 'var(--line)'}"></rect>`
+  }).join('')}</svg>`
+}
+
+// Weight: dots for readings, a line for the 7-day average, a dashed goal.
+function weightChart(series, goal) {
+  const W = 320, H = 160, PL = 34, PR = 8, PT = 12, PB = 22
+  if (!series.length) return ''
+  const ys = series.flatMap((s) => [s.kg, s.avg]).concat(goal ? [goal] : [])
+  let lo = Math.min(...ys), hi = Math.max(...ys)
+  const pad = Math.max(0.5, (hi - lo) * 0.15); lo -= pad; hi += pad
+  const x = (i) => PL + (series.length === 1 ? (W - PL - PR) / 2 : i * (W - PL - PR) / (series.length - 1))
+  const y = (v) => PT + (H - PT - PB) * (1 - (v - lo) / (hi - lo))
+  const line = series.map((s, i) => `${i ? 'L' : 'M'}${x(i).toFixed(1)},${y(s.avg).toFixed(1)}`).join('')
+  const ticks = [lo + pad, (lo + hi) / 2, hi - pad]
+  return `<svg class="chart" viewBox="0 0 ${W} ${H}" role="img" aria-label="Weight">
+    ${ticks.map((t) => `<line class="gridline" x1="${PL}" y1="${y(t)}" x2="${W - PR}" y2="${y(t)}"></line>
+      <text class="axis" x="${PL - 6}" y="${y(t) + 3.5}" text-anchor="end">${t.toFixed(1)}</text>`).join('')}
+    ${goal ? `<line class="goalline" x1="${PL}" y1="${y(goal)}" x2="${W - PR}" y2="${y(goal)}"></line>
+              <text class="vlabel" x="${W - PR}" y="${y(goal) - 4}" text-anchor="end" style="fill:var(--accent)">goal ${goal}</text>` : ''}
+    ${series.map((s, i) => `<circle cx="${x(i)}" cy="${y(s.kg)}" r="2.6" fill="var(--faint)"></circle>`).join('')}
+    <path d="${line}" fill="none" stroke="var(--accent)" stroke-width="2.2" stroke-linejoin="round" stroke-linecap="round"></path>
+    <text class="axis" x="${PL}" y="${H - 6}">${shortDate(series[0].date)}</text>
+    <text class="axis" x="${W - PR}" y="${H - 6}" text-anchor="end">${shortDate(series.at(-1).date)}</text>
+  </svg>`
+}
+
+/* ================================================================== log */
 const EXAMPLES = ['2 dosa and sambar', 'a bowl of curd rice', '2 eggs and 2 chapati']
-const GOOGLE_SVG = `<svg viewBox="0 0 48 48"><path fill="#EA4335" d="M24 9.5c3.5 0 6.6 1.2 9 3.6l6.7-6.7C35.6 2.6 30.2 0 24 0 14.6 0 6.5 5.4 2.6 13.2l7.8 6.1C12.3 13.2 17.6 9.5 24 9.5z"/><path fill="#4285F4" d="M46.98 24.5c0-1.6-.15-3.2-.43-4.7H24v9h12.9c-.56 3-2.24 5.5-4.77 7.2l7.5 5.8c4.4-4 6.9-10 6.9-17.3z"/><path fill="#FBBC05" d="M10.4 28.7a14.5 14.5 0 010-9.4l-7.8-6.1a24 24 0 000 21.6l7.8-6.1z"/><path fill="#34A853" d="M24 48c6.5 0 11.9-2.1 15.9-5.8l-7.5-5.8c-2.1 1.4-4.8 2.2-8.4 2.2-6.4 0-11.7-3.7-13.6-9.8l-7.8 6.1C6.5 42.6 14.6 48 24 48z"/></svg>`
 
 function bubble(cls, text) {
   const d = el(cls); d.textContent = text
@@ -307,75 +503,85 @@ function bubble(cls, text) {
 }
 
 function intro() {
-  const box = el('intro', `
-    <h1>What did you eat?</h1>
+  const box = el('intro', `<h1>What did you eat?</h1>
     <p>Type it however you'd say it. I work out the calories, you confirm, it's logged.</p>
     <div class="lbl">try</div>` + EXAMPLES.map((e) => `<button class="eg">${esc(e)}</button>`).join(''))
   box.querySelectorAll('.eg').forEach((b) => (b.onclick = () => { $('say').value = b.textContent; send() }))
   return box
 }
 
-function todayPanel(rows) {
-  const box = el('sect', `<h3>what you ate</h3>` + (rows.length ? rows.map((r) => `
-    <div class="ent" data-id="${r.id}">
-      <span class="n">${qtyLabel(r.qty, r.unit)} ${esc(cap(r.name))}</span>
-      <span class="k">${r.kcal} kcal</span>
-      <button class="x" title="remove">×</button>
-    </div>`).join('') : '<p class="hint">Nothing logged yet today.</p>'))
-  box.querySelectorAll('.ent').forEach((row) => {
-    row.querySelector('.x').onclick = async () => {
-      row.style.opacity = .4
-      const out = await api(`/api/entry?id=${row.dataset.id}`, { method: 'DELETE' })
-      out.deleted ? render() : (row.style.opacity = 1)
-    }
-  })
-  return box
+async function loadDay() { return (cache.day ??= await api(`/api/day?date=${logDate}`)) }
+async function loadRange(days = 7) {
+  if (cache.range?.n !== days) cache.range = { n: days, p: api(`/api/range?days=${days}`) }
+  return cache.range.p
+}
+async function loadBody() { return (cache.body ??= await api('/api/body')) }
+
+async function viewLog() {
+  const d = await loadDay()
+  view.innerHTML = ''
+
+  const hero = el('card hero', `<h3>${prettyDate(logDate)}</h3>${ringHero(d)}<div style="height:12px"></div>${macroPanel(d.totals, d.targets)}`)
+  view.appendChild(hero)
+  hero.querySelector('#setT')?.addEventListener('click', (e) => { e.preventDefault(); settingsScreen() })
+  if (!d.targets?.target_kcal) {
+    loadRange(30).then((r) => { if (r?.daysLogged && hero.isConnected)
+      hero.querySelector('.mrow')?.parentElement && (hero.innerHTML = `<h3>${prettyDate(logDate)}</h3>${ringHero(d)}<div style="height:12px"></div>${macroPanel(d.totals, d.targets, r.averages)}`) }).catch(() => {})
+  }
+
+  if (d.rows.length) {
+    const box = el('card', `<h3>what you ate<span class="r">${d.rows.length} items</span></h3>${mealGroups(d.rows)}`)
+    box.querySelectorAll('.ent').forEach((row) => {
+      row.querySelector('.x').onclick = async () => {
+        row.style.opacity = .4
+        const out = await api(`/api/entry?id=${row.dataset.id}`, { method: 'DELETE' })
+        out.deleted ? (cache.day = null, cache.range = null, render()) : (row.style.opacity = 1)
+      }
+    })
+    view.appendChild(box)
+  } else if (!chat.length) view.appendChild(intro())
+
+  if (me?.signedIn && me.user.plan === 'hosted' && !sessionStorage.getItem('hostedNote')) {
+    view.appendChild(el('banner', `<b>You're on the app's key.</b> This will need a subscription once payments are live.`))
+    sessionStorage.setItem('hostedNote', '1')
+  }
+  chat.forEach((n) => view.appendChild(n))
+  view.scrollTop = view.scrollHeight
 }
 
-// The confirm gate. Nothing is written until "log it"; it sends only names and
-// quantities, and the server recomputes every number from the food table.
+/* ============================================================ proposal */
 function proposalCard(p) {
-  // The review card is EDITABLE. Getting a quantity or a calorie wrong is the
-  // normal case, and re-explaining it in chat to fix a number is absurd.
-  // Everything recomputes locally as you type; the server recomputes again on
-  // commit, so the numbers are still not trusted from the client.
   const rows = p.rows.map((r) => ({ ...r }))
-
-  const box = el('sect', `<h3>${p.date}</h3>
+  let meal = p.meal ?? null
+  const box = el('card', `<h3>${prettyDate(p.date)}</h3>
+    <div class="mealpick">${['breakfast', 'lunch', 'dinner', 'snack'].map((m) => `<button data-m="${m}" class="${m === meal ? 'on' : ''}">${cap(m)}</button>`).join('')}</div>
     <div class="plist"></div>
     <div class="row tot"><span>total</span><span class="grand"></span></div>
     <div class="edited" hidden></div>
     <div class="acts"><button class="b" data-a="no">cancel</button><button class="b go" data-a="yes">log it</button></div>`)
+  box.querySelectorAll('.mealpick button').forEach((b) => (b.onclick = () => {
+    meal = b.dataset.m
+    box.querySelectorAll('.mealpick button').forEach((x) => x.classList.toggle('on', x === b))
+  }))
 
-  const list = box.querySelector('.plist')
-  const grand = box.querySelector('.grand')
-  const editedNote = box.querySelector('.edited')
-
+  const list = box.querySelector('.plist'), grand = box.querySelector('.grand'), editedNote = box.querySelector('.edited')
   const paint = () => {
     const live = rows.filter((r) => !r.dropped)
     const kcal = live.reduce((t, r) => t + Math.round(r.kcal_per_unit * r.qty / (r.basis || 1)), 0)
-    // Protein per unit, scaled by any calorie correction - the same
-    // proportional rule the server applies when it stores the edit.
     const protein = Math.round(live.reduce((t, r) => {
       const ratio = r.orig_kcal ? r.kcal_per_unit / r.orig_kcal : 1
       return t + r.protein_per_unit * ratio * r.qty / (r.basis || 1)
     }, 0) * 10) / 10
     grand.textContent = `${kcal} kcal · ${protein}g protein`
     box.querySelector('[data-a=yes]').disabled = live.length === 0
-
     const changed = rows.filter((r) => !r.dropped && Math.abs(r.kcal_per_unit - r.orig_kcal) >= 0.5)
     editedNote.hidden = !changed.length
-    if (changed.length) {
-      editedNote.textContent =
-        `saves the corrected value for ${changed.map((r) => r.name).join(', ')}`
-    }
+    if (changed.length) editedNote.textContent = `saves the corrected value for ${changed.map((r) => r.name).join(', ')}`
   }
-
-  rows.forEach((r, i) => {
+  rows.forEach((r) => {
     r.orig_kcal = r.kcal_per_unit
     r.protein_per_unit = r.qty ? (r.protein_g * (r.basis || 1)) / r.qty : 0
-    const line = el('prow', `
-      <span class="pn">${esc(cap(r.name))}</span>
+    const line = el('prow', `<span class="pn">${esc(cap(r.name))}</span>
       <div class="pctl">
         <input class="q" type="number" inputmode="decimal" min="0" step="0.5" value="${r.qty}">
         <span class="unit">${esc(r.basis > 1 ? r.unit : '× ' + r.unit)}</span>
@@ -384,59 +590,33 @@ function proposalCard(p) {
         <span class="sub"></span>
         <button class="drop" title="remove">×</button>
       </div>`)
-
     const sub = line.querySelector('.sub')
-    const redraw = () => {
-      sub.textContent = `${Math.round(r.kcal_per_unit * r.qty / (r.basis || 1))} kcal`
-      paint()
-    }
-
-    line.querySelector('.q').addEventListener('input', (e) => {
-      const v = parseFloat(e.target.value)
-      r.qty = Number.isFinite(v) && v >= 0 ? v : 0
-      redraw()
-    })
-    line.querySelector('.k').addEventListener('input', (e) => {
-      const v = parseFloat(e.target.value)
-      r.kcal_per_unit = Number.isFinite(v) && v >= 0 ? v : 0
-      redraw()
-    })
-    line.querySelector('.drop').onclick = () => {
-      r.dropped = true
-      line.remove()
-      paint()
-    }
-    list.appendChild(line)
-    redraw()
+    const redraw = () => { sub.textContent = `${Math.round(r.kcal_per_unit * r.qty / (r.basis || 1))} kcal`; paint() }
+    line.querySelector('.q').addEventListener('input', (e) => { const v = parseFloat(e.target.value); r.qty = Number.isFinite(v) && v >= 0 ? v : 0; redraw() })
+    line.querySelector('.k').addEventListener('input', (e) => { const v = parseFloat(e.target.value); r.kcal_per_unit = Number.isFinite(v) && v >= 0 ? v : 0; redraw() })
+    line.querySelector('.drop').onclick = () => { r.dropped = true; line.remove(); paint() }
+    list.appendChild(line); redraw()
   })
   paint()
 
   box.querySelector('[data-a=no]').onclick = () => {
-    box.querySelector('.acts').remove()
-    bubble('tools', 'not logged')
+    box.querySelector('.acts').remove(); bubble('tools', 'not logged')
     history.push({ role: 'user', text: '(I cancelled that - do not log it)' })
   }
-
   box.querySelector('[data-a=yes]').onclick = async () => {
     box.querySelectorAll('button').forEach((b) => (b.disabled = true))
-    const items = rows.filter((r) => !r.dropped && r.qty > 0)
-      .map((r) => ({ name: r.name, qty: r.qty, kcal_per_unit: r.kcal_per_unit }))
-    const out = await api('/api/commit', { method: 'POST', body: JSON.stringify({ date: p.date, items }) })
+    const items = rows.filter((r) => !r.dropped && r.qty > 0).map((r) => ({ name: r.name, qty: r.qty, kcal_per_unit: r.kcal_per_unit }))
+    const out = await api('/api/commit', { method: 'POST', body: JSON.stringify({ date: p.date, meal, items }) })
     box.querySelector('.acts')?.remove()
     if (out.written) {
-      bubble('tools', `logged · ${out.totals.kcal} kcal`)
-      // Tell the model what was actually logged, so it does not repeat the
-      // mistake later in the same conversation.
+      bubble('tools', `logged · ${out.totals.kcal} kcal${meal ? ` · ${meal}` : ''}`)
       const edits = (out.corrected ?? []).map((c) => `${c.name} is ${c.to} kcal each, not ${c.from}`)
-      history.push({ role: 'user', text:
-        `(I corrected and logged: ${items.map((i) => `${i.qty} x ${i.name}`).join(', ')}` +
-        (edits.length ? `. Remember: ${edits.join('; ')}` : '') + ')' })
+      history.push({ role: 'user', text: `(I confirmed and logged: ${items.map((i) => `${i.qty} x ${i.name}`).join(', ')}` + (edits.length ? `. Remember: ${edits.join('; ')}` : '') + ')' })
       if (edits.length) bubble('tools', `learned · ${edits.join('; ')}`)
-      cache.range = null
+      cache.day = null; cache.range = null; cache.body = null
       render()
     } else bubble('err', out.error || 'could not save')
   }
-
   chat.push(box)
   if (tab === 'log') { view.appendChild(box); view.scrollTop = view.scrollHeight }
 }
@@ -449,169 +629,22 @@ async function send() {
   view.querySelector('.intro')?.remove()
   bubble('msg me', text)
   history.push({ role: 'user', text })
-
   const thinking = bubble('tools', '…')
   try {
     const res = await fetch('/api/chat', { method: 'POST', headers: headers(), body: JSON.stringify({ messages: history, date: logDate }) })
     if (res.status === 401) return gate('wrong passcode')
     const out = await res.json()
     thinking.remove(); chat.splice(chat.indexOf(thinking), 1)
-
-    // A rate-limited turn can still carry a finished proposal - show it, so a
-    // 429 never costs you the meal you just typed.
     if (out.history) history = out.history
-    if (out.error) {
-      bubble('err', out.error)
-      if (out.proposal) proposalCard(out.proposal)
-      return
-    }
+    if (out.needsKey) { bubble('err', out.error); return planScreen(me.user, out.error) }
+    if (out.error) { bubble('err', out.error); if (out.proposal) proposalCard(out.proposal); return }
     if (out.calls?.length) bubble('tools', out.calls.join(' → '))
     if (out.reply) bubble('msg bot', out.reply)
     if (out.proposal) proposalCard(out.proposal)
-  } catch {
-    thinking.remove(); chat.splice(chat.indexOf(thinking), 1)
-    bubble('err', 'network problem')
-  }
+  } catch { thinking.remove(); chat.splice(chat.indexOf(thinking), 1); bubble('err', 'network problem') }
 }
 
-/* =========================================================== CHARTS ===== */
-
-// Protein and carbs are 4 kcal/g, fat 9, so a macro's share of energy is a
-// different story from its weight in grams - the panel shows both.
-const MACROS = [
-  { k: 'protein_g', label: 'protein', v: 'protein', kcalPerG: 4 },
-  { k: 'carbs_g',   label: 'carbs',   v: 'carbs',   kcalPerG: 4 },
-  { k: 'fat_g',     label: 'fat',     v: 'fat',     kcalPerG: 9 },
-  { k: 'sugar_g',   label: 'sugar',   v: 'carbs',   kcalPerG: 4, sub: true },
-]
-
-// Bars are scaled against your own running average, so "a lot" means a lot
-// FOR YOU - no invented daily targets, which would need an onboarding flow and
-// would be a guess anyway.
-function macroPanel(totals, avg) {
-  const energy = MACROS.filter((m) => !m.sub)
-    .reduce((t, m) => t + (totals[m.k] || 0) * m.kcalPerG, 0)
-
-  return MACROS.map((m) => {
-    const g = totals[m.k] || 0
-    const ref = avg?.[m.k] || 0
-    const top = Math.max(g, ref) * 1.25 || 1
-    const pct = energy && !m.sub ? Math.round((g * m.kcalPerG / energy) * 100) : null
-    return `<div class="mrow">
-      <span class="ml">${m.label}</span>
-      <span class="mt">
-        <i style="width:${Math.min(100, g / top * 100)}%;background:var(--${m.v});${m.sub ? 'opacity:.55' : ''}"></i>
-        ${ref ? `<u style="left:${Math.min(99, ref / top * 100)}%" title="your average ${ref}g"></u>` : ''}
-      </span>
-      <span class="mv">${Math.round(g)}g${pct !== null ? ` <small>${pct}%</small>` : ''}</span>
-    </div>`
-  }).join('')
-}
-
-const DOW = ['S', 'M', 'T', 'W', 'T', 'F', 'S']
-const DAYS_FULL = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday']
-const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']
-const asDate = (iso) => { const [y, m, d] = iso.split('-').map(Number); return new Date(y, m - 1, d) }
-const dayName = (iso) => DAYS_FULL[asDate(iso).getDay()]
-// "Wednesday, 8 Sep" beats "2026-09-08" for a log you scroll through by feel.
-const prettyDate = (iso) => {
-  const d = asDate(iso)
-  const rel = iso === isoToday() ? 'Today' : iso === shiftIso(isoToday(), -1) ? 'Yesterday' : null
-  const base = `${dayName(iso)}, ${d.getDate()} ${MONTHS[d.getMonth()]}`
-  return rel ? `${rel} · ${base}` : base
-}
-const dowOf = (iso) => { const [y, m, d] = iso.split('-').map(Number); return DOW[new Date(y, m - 1, d).getDay()] }
-const dayNum = (iso) => Number(iso.slice(8))
-
-// Vertical bars, one series, so no legend - the section title names it.
-// Tapping a bar selects that day rather than relying on hover, which does not
-// exist on a phone.
-function weekChart(days, avg, metric, picked, color) {
-  const W = 320, H = 150, PAD_B = 22, PAD_T = 14
-  const max = Math.max(...days.map((d) => d[metric] || 0), avg, 1)
-  const scale = (v) => (H - PAD_B - PAD_T) * (v / max)
-  const bw = W / days.length
-  const inner = bw - 6 // 2px+ of surface between adjacent bars
-
-  const bars = days.map((d, i) => {
-    const value = d[metric] || 0
-    const h = scale(value)
-    const x = i * bw + 3
-    const y = H - PAD_B - h
-    const on = d.date === picked
-    return `<g class="bar" data-date="${d.date}">
-      <rect class="hit" x="${i * bw}" y="0" width="${bw}" height="${H}"></rect>
-      ${value ? `<rect x="${x}" y="${y}" width="${inner}" height="${h}" rx="4"
-          fill="${on ? 'var(--accent)' : color}"></rect>`
-        : `<rect x="${x}" y="${H - PAD_B - 3}" width="${inner}" height="3" rx="1.5" fill="var(--line)"></rect>`}
-      <text class="axis ${on ? 'on' : ''}" x="${x + inner / 2}" y="${H - 8}" text-anchor="middle">${dowOf(d.date)}</text>
-      ${on && value ? `<text class="vlabel" x="${x + inner / 2}" y="${y - 5}" text-anchor="middle">${Math.round(value)}</text>` : ''}
-    </g>`
-  }).join('')
-
-  const ay = H - PAD_B - scale(avg)
-  return `<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="Calories per day">
-    <line class="gridline" x1="0" y1="${H - PAD_B}" x2="${W}" y2="${H - PAD_B}"></line>
-    ${avg ? `<line class="avgline" x1="0" y1="${ay}" x2="${W}" y2="${ay}"></line>` : ''}
-    ${bars}
-  </svg>`
-}
-
-// Macros as a share of energy: protein and carbs 4 kcal/g, fat 9.
-function macroStack(t) {
-  const parts = [
-    { k: 'protein', label: 'protein', kcal: (t.protein_g || 0) * 4, v: t.protein_g },
-    { k: 'carbs', label: 'carbs', kcal: (t.carbs_g || 0) * 4, v: t.carbs_g },
-    { k: 'fat', label: 'fat', kcal: (t.fat_g || 0) * 9, v: t.fat_g },
-  ]
-  const sum = parts.reduce((a, p) => a + p.kcal, 0)
-  if (!sum) return '<p class="hint">No macros recorded yet.</p>'
-  return `<div class="stack">` +
-    parts.map((p) => `<span style="flex:${p.kcal};background:var(--${p.k})"></span>`).join('') +
-    `</div><div class="legend">` +
-    parts.map((p) => `<div><i style="background:var(--${p.k})"></i>${p.label} ${p.v}g · ${Math.round(p.kcal / sum * 100)}%</div>`).join('') +
-    `</div>`
-}
-
-/* ============================================================ VIEWS ===== */
-
-const cache = { day: null, range: null, insights: null }
-let pickedDay = null
-
-async function loadDay() { return (cache.day ??= await api(`/api/day?date=${logDate}`)) }
-async function loadRange(days = 7) {
-  if (cache.range?.n !== days) cache.range = { n: days, p: api(`/api/range?days=${days}`) }
-  return cache.range.p
-}
-
-async function viewLog() {
-  const d = await loadDay()
-  view.innerHTML = ''
-
-  if (d.rows.length) {
-    // Averages are loaded lazily so the log stays instant; the reference marks
-    // appear a moment later rather than blocking the screen.
-    const card = el('sect', `<h3>${prettyDate(logDate)}</h3>
-      <div class="bignum"><b>${d.totals.kcal}</b><span>kcal</span>
-        <span class="delta" id="vsavg"></span></div>
-      <div id="macros">${macroPanel(d.totals, null)}</div>`)
-    view.appendChild(card)
-    loadRange(30).then((r) => {
-      if (!r?.daysLogged || !card.isConnected) return
-      card.querySelector('#macros').innerHTML = macroPanel(d.totals, r.averages)
-      const diff = d.totals.kcal - r.averages.kcal
-      card.querySelector('#vsavg').textContent =
-        `${diff >= 0 ? '+' : ''}${Math.round(diff)} vs your average`
-    }).catch(() => {})
-  }
-  // An empty "today" card above the intro is just clutter on first open - show
-  // one or the other, never both.
-  if (d.rows.length) view.appendChild(todayPanel(d.rows))
-  else if (!chat.length) view.appendChild(intro())
-  chat.forEach((n) => view.appendChild(n))
-  view.scrollTop = view.scrollHeight
-}
-
+/* =============================================================== trends */
 const METRICS = [
   { key: 'kcal', label: 'calories', unit: 'kcal', color: 'var(--fat)' },
   { key: 'protein_g', label: 'protein', unit: 'g', color: 'var(--protein)' },
@@ -619,307 +652,261 @@ const METRICS = [
   { key: 'fat_g', label: 'fat', unit: 'g', color: 'var(--fat)' },
   { key: 'sugar_g', label: 'sugar', unit: 'g', color: 'var(--carbs)' },
 ]
-let weekMetric = 'kcal'
-let weekSpan = 7
+let trendMetric = 'kcal', trendSpan = 7
 
-async function viewWeek() {
-  const r = await loadRange(weekSpan)
+async function viewTrends() {
+  const r = await loadRange(trendSpan)
   view.innerHTML = ''
-
-  const spans = el('sect', `<h3>window</h3><div class="pills">` +
-    [7, 14, 30].map((n) => `<button data-n="${n}" class="${n === weekSpan ? 'on' : ''}">${n} days</button>`).join('') +
-    `</div>`)
-  spans.querySelectorAll('button').forEach((b) => (b.onclick = () => {
-    weekSpan = Number(b.dataset.n); pickedDay = null; viewWeek()
-  }))
-  view.appendChild(spans)
-
-  if (!r.daysLogged) {
-    return view.appendChild(el('sect', `<h3>last ${weekSpan} days</h3><p class="hint">Nothing logged yet in this window.</p>`))
-  }
-
-  const m = METRICS.find((x) => x.key === weekMetric)
+  const m = METRICS.find((x) => x.key === trendMetric)
   const avg = r.averages[m.key] || 0
   pickedDay ??= r.days.filter((d) => d.items.length).at(-1)?.date ?? r.days.at(-1).date
 
-  // One metric at a time: two measures on one plot would need two scales, and
-  // a dual axis is the fastest way to make a chart lie.
-  const chart = el('sect', `<h3>${m.label} · last ${weekSpan} days · avg ${Math.round(avg)}${m.unit} (dashed)</h3>
-    <div class="pills">` +
-    METRICS.map((x) => `<button data-k="${x.key}" class="${x.key === weekMetric ? 'on' : ''}">${x.label}</button>`).join('') +
-    `</div>${weekChart(r.days, avg, m.key, pickedDay, m.color)}`)
-  chart.querySelectorAll('.pills button').forEach((b) => (b.onclick = () => { weekMetric = b.dataset.k; viewWeek() }))
-  chart.querySelectorAll('.bar').forEach((g) => (g.onclick = () => { pickedDay = g.dataset.date; viewWeek() }))
+  const chart = el('card', `<h3>${m.label} · avg ${Math.round(avg)}${m.unit}<span class="r">dashed = average</span></h3>
+    <div class="pills">${[7, 14, 30, 90].map((n) => `<button data-n="${n}" class="${n === trendSpan ? 'on' : ''}">${n}d</button>`).join('')}</div>
+    <div class="pills">${METRICS.map((x) => `<button data-k="${x.key}" class="${x.key === trendMetric ? 'on' : ''}">${x.label}</button>`).join('')}</div>
+    ${r.daysLogged ? weekChart(r.days, avg, m.key, pickedDay, m.color) : '<p class="hint">Nothing logged in this window yet.</p>'}`)
+  chart.querySelectorAll('[data-n]').forEach((b) => (b.onclick = () => { trendSpan = Number(b.dataset.n); pickedDay = null; viewTrends() }))
+  chart.querySelectorAll('[data-k]').forEach((b) => (b.onclick = () => { trendMetric = b.dataset.k; viewTrends() }))
+  chart.querySelectorAll('.bar').forEach((g) => (g.onclick = () => { pickedDay = g.dataset.date; viewTrends() }))
   view.appendChild(chart)
+  if (!r.daysLogged) return
 
   const sel = r.days.find((d) => d.date === pickedDay) ?? r.days.at(-1)
-  view.appendChild(el('sect',
-    `<h3>${prettyDate(sel.date)}</h3>` +
-    (sel.items.length
-      ? `<div class="bignum"><b>${sel.kcal}</b><span>kcal</span></div>` +
-        macroPanel(sel, r.averages) +
-        `<div style="margin-top:12px">` +
-        sel.items.map((i) => `<div class="ent"><span class="n">${qtyLabel(i.qty, i.unit)} ${esc(cap(i.name))}</span><span class="k">${i.kcal} kcal</span></div>`).join('') +
-        `</div>`
-      : '<p class="hint">Nothing logged this day.</p>')))
-}
-
-// A sparkline per macro: four small multiples sharing a form but each on its
-// own scale, which is the honest alternative to stacking different units on
-// one axis.
-function spark(days, key, color) {
-  const W = 150, H = 40
-  const vals = days.map((d) => d[key] || 0)
-  const max = Math.max(...vals, 1)
-  const bw = W / days.length
-  return `<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="${key} per day">
-    ${vals.map((v, i) => {
-      const h = v / max * (H - 4)
-      return `<rect x="${i * bw + 0.8}" y="${H - h}" width="${Math.max(1.4, bw - 1.6)}" height="${h || 1}"
-        rx="1.4" fill="${v ? color : 'var(--line)'}"></rect>`
-    }).join('')}
-  </svg>`
-}
-
-let statsSpan = 30
-
-async function viewStats() {
-  const r = await loadRange(statsSpan)
-  view.innerHTML = ''
-
-  const spans = el('sect', `<h3>window</h3><div class="pills">` +
-    [7, 14, 30, 90].map((n) => `<button data-n="${n}" class="${n === statsSpan ? 'on' : ''}">${n} days</button>`).join('') +
-    `</div>`)
-  spans.querySelectorAll('button').forEach((b) => (b.onclick = () => { statsSpan = Number(b.dataset.n); viewStats() }))
-  view.appendChild(spans)
-
-  if (!r.daysLogged) return view.appendChild(el('sect', '<h3>stats</h3><p class="hint">Nothing to summarise yet.</p>'))
+  view.appendChild(el('card', `<h3>${prettyDate(sel.date)}</h3>` + (sel.items.length
+    ? `<div class="bignum"><b>${sel.kcal}</b><span>kcal</span></div>${macroPanel(sel, {}, r.averages)}<div style="height:8px"></div>${mealGroups(sel.items, false)}`
+    : '<p class="hint">Nothing logged this day.</p>')))
 
   const a = r.averages
-  const logged = r.days.filter((d) => d.items.length)
-  const kcals = logged.map((d) => d.kcal)
-  const hi = logged.reduce((m, d) => (d.kcal > m.kcal ? d : m), logged[0])
-  const lo = logged.reduce((m, d) => (d.kcal < m.kcal ? d : m), logged[0])
-
-  view.appendChild(el('sect', `<h3>daily average · ${r.daysLogged} of ${r.days.length} days logged</h3>
-    <div class="bignum"><b>${a.kcal}</b><span>kcal a day</span></div>
-    ${macroPanel(a, null)}`))
-
-  view.appendChild(el('sect', `<h3>where the energy comes from</h3>${macroStack(a)}`))
-
-  view.appendChild(el('sect', `<h3>each macro, day by day</h3>
-    <div class="sm">` +
-    [['protein_g', 'protein', 'var(--protein)'], ['carbs_g', 'carbs', 'var(--carbs)'],
-     ['fat_g', 'fat', 'var(--fat)'], ['sugar_g', 'sugar', 'var(--carbs)']]
-      .map(([k, label, c]) => `<figure>
-        <figcaption><span>${label}</span><b>${a[k]}g avg</b></figcaption>
-        ${spark(r.days, k, c)}
-      </figure>`).join('') +
-    `</div>`))
-
-  view.appendChild(el('sect', `<h3>spread</h3>
-    <div class="row"><span>highest day</span><span>${dayName(hi.date)} ${hi.date.slice(8)} ${MONTHS[asDate(hi.date).getMonth()]} · ${hi.kcal} kcal</span></div>
-    <div class="row"><span>lowest day</span><span>${dayName(lo.date)} ${lo.date.slice(8)} ${MONTHS[asDate(lo.date).getMonth()]} · ${lo.kcal} kcal</span></div>
+  const logged = r.days.filter((d) => d.items.length), kcals = logged.map((d) => d.kcal)
+  const hi = logged.reduce((x, d) => (d.kcal > x.kcal ? d : x), logged[0]), lo = logged.reduce((x, d) => (d.kcal < x.kcal ? d : x), logged[0])
+  view.appendChild(el('card', `<h3>daily average · ${r.daysLogged} of ${r.days.length} days</h3>
+    <div class="bignum"><b>${Math.round(a.kcal)}</b><span>kcal a day</span></div>${macroPanel(a)}`))
+  view.appendChild(el('card', `<h3>where the energy comes from</h3>${macroStack(a)}`))
+  view.appendChild(el('card', `<h3>each macro, day by day</h3><div class="sm">` +
+    [['protein_g', 'protein', 'var(--protein)'], ['carbs_g', 'carbs', 'var(--carbs)'], ['fat_g', 'fat', 'var(--fat)'], ['sugar_g', 'sugar', 'var(--carbs)']]
+      .map(([k, label, c]) => `<figure><figcaption><span>${label}</span><b>${Math.round(a[k])}g avg</b></figcaption>${spark(r.days, k, c)}</figure>`).join('') + `</div>`))
+  view.appendChild(el('card', `<h3>spread</h3>
+    <div class="row"><span>highest day</span><span>${dayName(hi.date)} ${shortDate(hi.date)} · ${hi.kcal} kcal</span></div>
+    <div class="row"><span>lowest day</span><span>${dayName(lo.date)} ${shortDate(lo.date)} · ${lo.kcal} kcal</span></div>
     <div class="row"><span>range</span><span>${Math.max(...kcals) - Math.min(...kcals)} kcal</span></div>
     <div class="row"><span>days over average</span><span>${kcals.filter((k) => k > a.kcal).length} of ${kcals.length}</span></div>`))
-
   const max = Math.max(...r.topFoods.map((f) => f.times), 1)
-  view.appendChild(el('sect', `<h3>most eaten · last ${statsSpan} days</h3>` +
-    r.topFoods.map((f) => `<div class="frow">
-      <span class="fn">${esc(cap(f.name))}</span>
-      <span class="fb"><i style="width:${f.times / max * 100}%"></i></span>
-      <span class="fc">${f.times}×</span>
-    </div>`).join('')))
+  view.appendChild(el('card', `<h3>most eaten</h3>` + r.topFoods.map((f) => `<div class="frow">
+    <span class="fn">${esc(cap(f.name))}</span><span class="fb"><i style="width:${f.times / max * 100}%"></i></span><span class="fc">${f.times}×</span></div>`).join('')))
 }
 
+/* ================================================================= body */
+async function viewBody() {
+  const b = await loadBody()
+  view.innerHTML = ''
+
+  // weigh-in first: it is the thing you do every morning
+  const form = el('card hero', `<h3>weigh in<span class="r">${prettyDate(isoToday())}</span></h3>
+    <div class="wform"><input id="wkg" type="number" inputmode="decimal" step="0.1" min="20" max="400"
+      placeholder="${b.latest ? b.latest.kg : 'kg'}"><button class="b go" id="wsave">save</button></div>
+    <p class="hint" style="margin-top:10px">Morning, after the toilet, before food. Same scale, same spot. Then watch the 7-day line, not the daily dot.</p>`)
+  form.querySelector('#wsave').onclick = async () => {
+    const kg = parseFloat(form.querySelector('#wkg').value)
+    if (!Number.isFinite(kg)) return
+    form.querySelector('#wsave').disabled = true
+    const out = await api('/api/weight', { method: 'POST', body: JSON.stringify({ kg, date: isoToday() }) })
+    if (out.ok) { cache.body = null; viewBody() } else { form.querySelector('#wsave').disabled = false; alert(out.error) }
+  }
+  form.querySelector('#wkg').addEventListener('keydown', (e) => { if (e.key === 'Enter') form.querySelector('#wsave').click() })
+  view.appendChild(form)
+
+  if (!b.series.length) {
+    return view.appendChild(el('card', `<h3>trend</h3><p class="hint">Log your first weight above. After a week the trend appears; after three the app measures your real maintenance calories from it.</p>`))
+  }
+
+  const dir = (v) => v == null ? '—' : `${v > 0 ? '+' : ''}${v} kg`
+  const cls = (v) => v == null ? '' : v < 0 ? 'down' : v > 0 ? 'up' : ''
+  view.appendChild(el('card', `<h3>weight<span class="r">7-day average</span></h3>
+    <div class="stat3">
+      <div><b>${b.latest.avg}</b><small>now</small></div>
+      <div><b class="${cls(b.change_7d)}">${dir(b.change_7d)}</b><small>7 days</small></div>
+      <div><b class="${cls(b.change_30d)}">${dir(b.change_30d)}</b><small>30 days</small></div>
+    </div>
+    <div style="height:14px"></div>
+    ${weightChart(b.series, b.goal_kg)}
+    ${b.projection ? `<p class="hint" style="margin-top:10px">${b.projection.stalled
+      ? `At the current rate (${b.projection.rate_per_week} kg/week) you are not moving toward ${b.goal_kg} kg.`
+      : `At ${b.projection.rate_per_week} kg/week you reach <b style="color:var(--text)">${b.goal_kg} kg around ${shortDate(b.projection.date)}</b> — ${b.projection.days} days.`}</p>`
+      : b.goal_kg ? '' : `<p class="hint" style="margin-top:10px">Set a goal weight in settings to see a projection.</p>`}`))
+
+  const m = b.maintenance
+  view.appendChild(el('card', `<h3>maintenance, measured<span class="r">${m ? m.confidence + ' confidence' : ''}</span></h3>` + (m
+    ? `<div class="bignum"><b>${m.kcal}</b><span>kcal a day, in your logged units</span></div>
+       <p class="hint">Over ${m.over_days} days you logged ${m.avg_intake} kcal/day on average and your 7-day weight moved ${m.kg_change > 0 ? '+' : ''}${m.kg_change} kg. That implies the intake that would hold you steady is <b style="color:var(--text)">${m.kcal}</b>. No formula — your own data.</p>
+       ${m.confidence === 'low' ? '<p class="hint" style="margin-top:8px">Under three weeks, water swings dominate. Treat this as a rough first read.</p>' : ''}
+       <p class="hint" style="margin-top:8px">To lose ~0.5 kg/week, target about <b style="color:var(--text)">${m.kcal - 500}</b>.</p>`
+    : `<p class="hint">Needs about a week of weights alongside your food log. Then this becomes the one number the app was guessing at.</p>`)))
+
+  const list = el('card', `<h3>readings</h3>` + [...b.series].reverse().slice(0, 14).map((s) =>
+    `<div class="ent" data-date="${s.date}" style="padding-left:0"><span class="n">${prettyDate(s.date)}</span><span class="k">${s.kg} kg</span><button class="x" title="remove">×</button></div>`).join(''))
+  list.querySelectorAll('.ent').forEach((row) => (row.querySelector('.x').onclick = async () => {
+    row.style.opacity = .4
+    const out = await api(`/api/weight?date=${row.dataset.date}`, { method: 'DELETE' })
+    if (out.deleted) { cache.body = null; viewBody() } else row.style.opacity = 1
+  }))
+  view.appendChild(list)
+}
+
+/* ============================================================= insights */
 async function viewInsights() {
   view.innerHTML = ''
-  const box = el('sect', `<h3>insights · last 14 days</h3>
+  const box = el('card', `<h3>insights · last 14 days</h3>
     <p class="hint">A separate pass over your history. It reads the whole log at once and tells you what to change.</p>
     <div class="acts"><button class="b go" id="gen">read my log</button></div>`)
   view.appendChild(box)
-
   if (cache.insights) return paintInsights(cache.insights)
   box.querySelector('#gen').onclick = async () => {
-    const btn = box.querySelector('#gen')
-    btn.disabled = true; btn.textContent = 'reading…'
-    try {
-      const out = await api('/api/insights?days=14')
-      cache.insights = out
-      paintInsights(out)
-    } catch {
-      btn.disabled = false; btn.textContent = 'read my log'
-    }
+    const btn = box.querySelector('#gen'); btn.disabled = true; btn.textContent = 'reading…'
+    try { cache.insights = await api('/api/insights?days=14'); paintInsights(cache.insights) }
+    catch { btn.disabled = false; btn.textContent = 'read my log' }
+  }
+}
+function paintInsights(out) {
+  view.querySelector('.acts')?.remove()
+  if (out.empty || out.error) return view.appendChild(el('card', `<p class="hint">${esc(out.message || out.error)}</p>`))
+  view.appendChild(el('card', `<div class="ins"><h4>pattern</h4><p>${esc(out.pattern)}</p></div>
+    <div class="ins up"><h4>increase</h4><p>${esc(out.increase)}</p></div>
+    <div class="ins down"><h4>reduce</h4><p>${esc(out.reduce)}</p></div>
+    <div class="ins note"><h4>note</h4><p>${esc(out.note)}</p></div>`))
+}
+
+/* ============================================================= settings */
+async function settingsScreen() {
+  const t = (await api('/api/targets')).targets || {}
+  const f = (k, label, ph) => `<div class="field"><label>${label}</label><input id="t_${k}" type="number" inputmode="decimal" step="any" value="${t[k] ?? ''}" placeholder="${ph}"></div>`
+  view.innerHTML = ''
+  $('bar').hidden = true
+  const box = el('card', `<h3>daily targets</h3>
+    ${f('target_kcal', 'calories (kcal)', 'e.g. 1755')}
+    <div class="grid2">${f('target_protein_g', 'protein (g)', '152')}${f('target_carbs_g', 'carbs (g)', '162')}</div>
+    <div class="grid2">${f('target_fat_g', 'fat (g)', '58')}${f('target_sugar_g', 'sugar (g)', '37')}</div>
+    <h3 style="margin-top:8px">body</h3>
+    <div class="grid2">${f('goal_kg', 'goal weight (kg)', '75')}${f('height_cm', 'height (cm)', '183')}</div>
+    <div class="acts"><button class="b" id="back">back</button><button class="b go" id="save">save</button></div>
+    ${me?.signedIn ? `<div class="acts"><button class="b" id="plan">AI plan & key</button><a class="b" href="/api/auth/logout" style="text-align:center;text-decoration:none">sign out</a></div>` : ''}`)
+  view.appendChild(box)
+  const leave = () => { $('bar').hidden = false; cache.day = null; cache.body = null; render() }
+  box.querySelector('#back').onclick = leave
+  box.querySelector('#plan')?.addEventListener('click', () => planScreen(me.user))
+  box.querySelector('#save').onclick = async () => {
+    const body = {}
+    for (const k of ['target_kcal', 'target_protein_g', 'target_carbs_g', 'target_fat_g', 'target_sugar_g', 'goal_kg', 'height_cm']) body[k] = box.querySelector(`#t_${k}`).value
+    await api('/api/targets', { method: 'POST', body: JSON.stringify(body) })
+    leave()
   }
 }
 
-function paintInsights(out) {
-  view.querySelector('.acts')?.remove()
-  if (out.empty || out.error) return view.appendChild(el('sect', `<p class="hint">${esc(out.message || out.error)}</p>`))
-  view.appendChild(el('sect',
-    `<div class="ins"><h4>pattern</h4><p>${esc(out.pattern)}</p></div>` +
-    `<div class="ins up"><h4>increase</h4><p>${esc(out.increase)}</p></div>` +
-    `<div class="ins down"><h4>reduce</h4><p>${esc(out.reduce)}</p></div>` +
-    `<div class="ins note"><h4>note</h4><p>${esc(out.note)}</p></div>`))
-}
-
-/* =========================================================== CHROME ===== */
-
-const VIEWS = { log: viewLog, week: viewWeek, stats: viewStats, insights: viewInsights }
+/* ================================================================ chrome */
+const VIEWS = { log: viewLog, trends: viewTrends, body: viewBody, insights: viewInsights }
 
 async function render() {
   cache.day = null
   if (tab !== 'log') cache.range = null
-  try {
-    const d = await loadDay()
-    $('kcal').textContent = d.totals.kcal || 0
-    $('protein').textContent = d.totals.protein_g ? `${d.totals.protein_g}g protein` : ''
-    document.querySelector('header .u').textContent =
-      logDate === isoToday() ? 'kcal today' : `kcal on ${logDate}`
-    await VIEWS[tab]()
-  } catch {
-    // Never leave a blank screen with a zero on it - that is indistinguishable
-    // from a broken app and tells you nothing.
+  try { await VIEWS[tab]() }
+  catch (e) {
+    if (String(e.message).includes('unauthorized')) return
     view.innerHTML = ''
-    view.appendChild(el('sect', '<p class="hint">Couldn\'t reach the server. Is it still running?</p>'))
+    view.appendChild(el('card', '<p class="hint">Couldn\'t reach the server. Is it still running?</p>'))
   }
 }
-
 function switchTab(name) {
   tab = name
   document.querySelectorAll('nav button').forEach((b) => b.classList.toggle('on', b.dataset.tab === name))
-  // The input stays on every tab. Hiding it on three of four screens meant
-  // that "I can't type" was sometimes literally true, by design, and there was
-  // nothing on screen to explain why.
+  $('daybar').style.display = name === 'log' ? 'flex' : 'none'
   render()
 }
 document.querySelectorAll('nav button').forEach((b) => (b.onclick = () => switchTab(b.dataset.tab)))
 
-let me = null   // /api/auth/me: who is signed in, and on which plan
-
-const screen = (html) => {
-  document.body.innerHTML = `<div class="gate">${html}</div>`
+function setDay(iso) {
+  logDate = iso > isoToday() ? isoToday() : iso
+  $('picker').value = logDate
+  const past = logDate !== isoToday()
+  $('daybar').classList.toggle('past', past)
+  $('daytag').innerHTML = `<b>${dayName(logDate)}</b>${past ? 'backfilling' : shortDate(logDate)}`
+  $('next').disabled = !past
+  chat = []; history = []; cache.day = null
+  render()
 }
+$('prev').onclick = () => setDay(shiftIso(logDate, -1))
+$('next').onclick = () => setDay(shiftIso(logDate, 1))
+$('picker').addEventListener('change', () => $('picker').value && setDay($('picker').value))
+
+/* ================================================================== auth */
+const GOOGLE_SVG = `<svg viewBox="0 0 48 48"><path fill="#EA4335" d="M24 9.5c3.5 0 6.6 1.2 9 3.6l6.7-6.7C35.6 2.6 30.2 0 24 0 14.6 0 6.5 5.4 2.6 13.2l7.8 6.1C12.3 13.2 17.6 9.5 24 9.5z"/><path fill="#4285F4" d="M46.98 24.5c0-1.6-.15-3.2-.43-4.7H24v9h12.9c-.56 3-2.24 5.5-4.77 7.2l7.5 5.8c4.4-4 6.9-10 6.9-17.3z"/><path fill="#FBBC05" d="M10.4 28.7a14.5 14.5 0 010-9.4l-7.8-6.1a24 24 0 000 21.6l7.8-6.1z"/><path fill="#34A853" d="M24 48c6.5 0 11.9-2.1 15.9-5.8l-7.5-5.8c-2.1 1.4-4.8 2.2-8.4 2.2-6.4 0-11.7-3.7-13.6-9.8l-7.8 6.1C6.5 42.6 14.6 48 24 48z"/></svg>`
+const screen = (html) => { document.body.innerHTML = `<div class="gate">${html}</div>` }
 
 function signInScreen(error) {
-  screen(`<h2>Calorie Counter</h2>
-    <p>Tell it what you ate. It works out the calories, you confirm, it's logged.</p>
+  screen(`<h2>Calorie Counter</h2><p>Tell it what you ate. It works out the calories, you confirm, it's logged.</p>
     ${error ? `<p class="err" style="margin-bottom:14px">${esc(error)}</p>` : ''}
     <a class="gsi" href="/api/auth/start">${GOOGLE_SVG}Continue with Google</a>`)
 }
-
-// Shown once after signing in, and reachable later from the account button.
 function planScreen(user, note) {
   screen(`<h2>Choose how you pay for the AI</h2>
-    <p>Every meal you log asks Gemini to work out the nutrition. That costs
-       someone an API call.</p>
+    <p>Every meal you log asks Gemini to work out the nutrition. That costs someone an API call.</p>
     ${note ? `<p class="err" style="margin-bottom:12px">${esc(note)}</p>` : ''}
-    <div class="plan ${user.plan === 'byok' ? 'sel' : ''}" data-plan="byok">
-      <span class="tag">free</span>
-      <h4>Use my own key</h4>
-      <p>Paste a free Gemini API key from Google AI Studio. Your quota, your
-         key, no charge — takes about five minutes to set up.</p>
-      <input id="gkey" type="password" placeholder="${user.hasKey ? 'key saved — paste a new one to replace' : 'AQ.… or AIzaSy…'}" autocomplete="off">
-    </div>
-    <div class="plan ${user.plan === 'hosted' ? 'sel' : ''}" data-plan="hosted">
-      <span class="tag">subscription</span>
-      <h4>Use the app's key</h4>
-      <p>Nothing to set up. This will need a paid subscription — for now it
-         works while that is being built.</p>
-    </div>
+    <div class="plan ${user.plan === 'byok' ? 'sel' : ''}" data-plan="byok"><span class="tag">free</span><h4>Use my own key</h4>
+      <p>Paste a free Gemini API key from Google AI Studio. Your quota, your key, no charge.</p>
+      <input id="gkey" type="password" placeholder="${user.hasKey ? 'key saved — paste a new one to replace' : 'AQ.… or AIzaSy…'}" autocomplete="off"></div>
+    <div class="plan ${user.plan === 'hosted' ? 'sel' : ''}" data-plan="hosted"><span class="tag">subscription</span><h4>Use the app's key</h4>
+      <p>Nothing to set up. This will need a paid subscription — for now it works while that is being built.</p></div>
     <button class="b go" id="savePlan" style="width:100%;margin-top:6px">continue</button>
-    <p style="margin-top:14px"><a href="/api/auth/logout" style="color:var(--faint);font-size:12.5px">sign out</a></p>`)
-
+    <p style="margin-top:14px"><a href="/" style="color:var(--faint);font-size:12.5px">back</a> · <a href="/api/auth/logout" style="color:var(--faint);font-size:12.5px">sign out</a></p>`)
   let chosen = user.plan || 'byok'
-  const paint = () => document.querySelectorAll('.plan')
-    .forEach((el) => el.classList.toggle('sel', el.dataset.plan === chosen))
-  document.querySelectorAll('.plan').forEach((el) => (el.onclick = () => { chosen = el.dataset.plan; paint() }))
-
+  const paint = () => document.querySelectorAll('.plan').forEach((x) => x.classList.toggle('sel', x.dataset.plan === chosen))
+  document.querySelectorAll('.plan').forEach((x) => (x.onclick = () => { chosen = x.dataset.plan; paint() }))
   document.getElementById('savePlan').onclick = async () => {
-    const btn = document.getElementById('savePlan')
-    btn.disabled = true
-    const body = { plan: chosen, gemini_key: document.getElementById('gkey')?.value.trim() }
-    const r = await fetch('/api/auth/plan', {
-      method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(body),
-    })
+    const btn = document.getElementById('savePlan'); btn.disabled = true
+    const r = await fetch('/api/auth/plan', { method: 'POST', headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ plan: chosen, gemini_key: document.getElementById('gkey')?.value.trim() }) })
     const out = await r.json()
-    if (out.ok) location.reload()
-    else { btn.disabled = false; planScreen(user, out.error) }
+    if (out.ok) location.href = '/'; else { btn.disabled = false; planScreen(user, out.error) }
   }
 }
-
-function accountButton() {
-  const b = $('acct')
-  if (!me?.signedIn) return
-  b.hidden = false
-  b.innerHTML = me.user.picture
-    ? `<img src="${esc(me.user.picture)}" alt="">`
-    : esc((me.user.name || me.user.email).split(' ')[0])
-  b.onclick = () => planScreen(me.user)
-}
-
-// Single-user mode (no Google configured) keeps the old shared passcode.
 function passcodeScreen(message) {
-  screen(`<h2>Calorie Counter</h2>
-    <p>${esc(message || 'enter the passcode')}</p>
-    <input id="p" type="password" enterkeyhint="go">
+  screen(`<h2>Calorie Counter</h2><p>${esc(message || 'enter the passcode')}</p>
+    <input id="p" type="password" enterkeyhint="go" class="b" style="text-align:left;font-weight:400">
     <button class="b go" id="ok" style="width:100%;margin-top:8px">unlock</button>`)
   const go = () => { localStorage.setItem('passcode', $('p').value.trim()); location.reload() }
   $('ok').onclick = go
   $('p').addEventListener('keydown', (e) => { if (e.key === 'Enter') go() })
   $('p').focus()
 }
-
 const gate = (m) => (me?.auth ? signInScreen(m) : passcodeScreen(m))
+
+function accountButton() {
+  const b = $('acct')
+  b.innerHTML = me?.signedIn && me.user.picture ? `<img src="${esc(me.user.picture)}" alt="">settings`
+    : `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/></svg>settings`
+  b.onclick = settingsScreen
+}
 
 async function boot() {
   const err = new URLSearchParams(location.search).get('error')
   if (err) history.replaceState({}, '', '/')
-
-  try {
-    me = await (await fetch('/api/auth/me')).json()
-  } catch {
-    me = { auth: false, single_user: true }
-  }
-
+  try { me = await (await fetch('/api/auth/me')).json() } catch { me = { auth: false, single_user: true } }
   if (me.auth && !me.signedIn) {
-    return signInScreen(err === 'auth_failed' ? 'Google sign-in failed. Try again.'
-      : err === 'auth_state' ? 'That sign-in link expired. Try again.' : null)
+    return signInScreen(err === 'auth_failed' ? 'Google sign-in failed. Try again.' : err === 'auth_state' ? 'That sign-in link expired. Try again.' : null)
   }
-  // A BYOK user with no key cannot log anything, so ask before showing the app.
   if (me.signedIn && me.user.plan === 'byok' && !me.user.hasKey) return planScreen(me.user)
-
   accountButton()
-  if (me.signedIn && me.user.plan === 'hosted') {
-    view.appendChild(el('banner',
-      `<b>You're on the app's key.</b> This will need a subscription once payments are live.`))
-  }
   setDay(logDate)
 }
 
 $('send').onclick = send
-// MUST be addEventListener, not `onkeydown = ...`. An arrow body of
-// `e.key === 'Enter' && send()` RETURNS FALSE for every other key, and
-// returning false from an on* handler calls preventDefault() - which for a
-// keydown means the character is never inserted. The box looked focused and
-// silently swallowed everything typed into it. addEventListener ignores the
-// return value, so the default action survives.
+// addEventListener, never onkeydown = (e) => cond && fn(): a false return value
+// calls preventDefault and silently swallows every keystroke.
 $('say').addEventListener('keydown', (e) => { if (e.key === 'Enter') send() })
 boot()
-
-// Focus on load so you can just type. Skipped on touch, where it would throw
-// the keyboard up before you have looked at anything.
 if (!matchMedia('(pointer:coarse)').matches) $('say').focus()
 
-// Only register in production. Service workers run on localhost too, so a
-// cached shell would silently shadow every local edit - all cost, no benefit
-// while developing. Any leftover registration is torn down here.
 if ('serviceWorker' in navigator) {
   if (location.protocol === 'https:') navigator.serviceWorker.register('/sw.js').catch(() => {})
-  else {
-    navigator.serviceWorker.getRegistrations().then((rs) => rs.forEach((r) => r.unregister()))
-    caches?.keys().then((ks) => ks.forEach((k) => caches.delete(k)))
-  }
+  else { navigator.serviceWorker.getRegistrations().then((rs) => rs.forEach((r) => r.unregister())); caches?.keys().then((ks) => ks.forEach((k) => caches.delete(k))) }
 }
 </script>
 </body>

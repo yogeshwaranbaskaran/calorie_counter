@@ -184,3 +184,14 @@ Anyone else who signs in starts empty, with their own food table.
   encrypted, never shown back. Their quota, not yours.
 - **app's key (subscription)** — uses `GEMINI_API_KEY`. Works today and shows
   a notice that payment is coming; it is not yet a hard stop.
+
+
+---
+
+# weight, targets and meals (migration 003)
+
+Run `db/003_weight_targets_meals.sql` in the Neon SQL Editor **before**
+deploying. It adds the `weights` table, `meal` on entries and target columns
+on users. Safe on live data; nothing existing changes.
+
+No new environment variables.
