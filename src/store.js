@@ -135,6 +135,20 @@ export async function putFood(userId, food) {
   )
 }
 
+export async function deleteFood(userId, name) {
+  const key = normalize(name)
+  if (!remote) {
+    const foods = await getFoods()
+    const had = key in foods
+    delete foods[key]
+    await writeJson('foods.json', foods)
+    return had
+  }
+  const rows = await q(
+    'delete from foods where user_id is not distinct from $1 and name = $2 returning id', [userId, key])
+  return rows.length > 0
+}
+
 export async function getLog(userId, from, to) {
   if (!remote) {
     const all = await readJson('log.json', [])

@@ -1,4 +1,4 @@
-import { getFoods, getFood, putFood, normalize } from '../src/store.js'
+import { getFoods, getFood, putFood, deleteFood, normalize } from '../src/store.js'
 import { findSimilar } from '../src/tools.js'
 import { send, requireUser, readBody } from '../src/http.js'
 
@@ -8,6 +8,7 @@ import { send, requireUser, readBody } from '../src/http.js'
 // the same shapes and the same near-duplicate refusal:
 //   GET  /api/foods?names=dosa,sambar   -> { hits, misses }
 //   POST /api/foods {name, unit, ...}   -> { saved } | { error: similar_food_already_exists }
+//   DELETE /api/foods?name=dal          -> { deleted } - forget a food (its logged rows stay)
 const NUMS = ['grams_per_unit', 'kcal', 'protein_g', 'carbs_g', 'fat_g', 'sugar_g']
 
 export default async function handler(req, res) {
@@ -52,7 +53,13 @@ export default async function handler(req, res) {
       return send(res, 200, { saved: await getFood(who.userId, body.name) })
     }
 
-    return send(res, 405, { error: 'GET or POST only' })
+    if (req.method === 'DELETE') {
+      const name = new URL(req.url, 'http://x').searchParams.get('name')
+      if (!name) return send(res, 400, { error: 'name required' })
+      return send(res, 200, { deleted: await deleteFood(who.userId, name) })
+    }
+
+    return send(res, 405, { error: 'GET, POST or DELETE only' })
   } catch (err) {
     return send(res, 500, { error: String(err.message ?? err) })
   }
