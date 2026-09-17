@@ -170,6 +170,12 @@ node -e "console.log(require('crypto').randomBytes(32).toString('base64url'))"
 > keys. Changing it later signs everyone out and makes stored keys unreadable —
 > they would each have to paste theirs again.
 
+## 3b. Optional: a token for your own scripts
+
+`API_TOKEN` lets a script act as the `OWNER_EMAIL` account without a browser
+session — the local Suno agent uses it. Send it as `Authorization: Bearer …`.
+Generate one the same way as `SESSION_SECRET`; it can be rotated freely.
+
 ## 4. Sign in
 
 Deploy, open the app, **Continue with Google**. Sign in with `OWNER_EMAIL`

@@ -1,52 +1,59 @@
-import { getFoods, getFood, putFood } from '../src/store.js'
+import { getFoods, getFood, putFood, normalize } from '../src/store.js'
 import { findSimilar } from '../src/tools.js'
 import { send, requireUser, readBody } from '../src/http.js'
 
 // The personal food table over HTTP, for agents that live outside this app
 // (the local Suno worker). Inside the app the Gemini agent reaches the table
-// through its tools; this gives an external model the same two moves:
-//   GET  /api/foods?names=dosa,sambar   -> what the table already knows
-//   POST /api/foods {name, unit, ...}   -> teach it one food, per single unit
-const FIELDS = ['unit', 'grams_per_unit', 'kcal', 'protein_g', 'carbs_g', 'fat_g', 'sugar_g']
+// through its tools; this gives an external model the same two moves, with
+// the same shapes and the same near-duplicate refusal:
+//   GET  /api/foods?names=dosa,sambar   -> { hits, misses }
+//   POST /api/foods {name, unit, ...}   -> { saved } | { error: similar_food_already_exists }
+const NUMS = ['grams_per_unit', 'kcal', 'protein_g', 'carbs_g', 'fat_g', 'sugar_g']
 
 export default async function handler(req, res) {
   const who = await requireUser(req, res)
   if (!who) return
 
-  if (req.method === 'GET') {
-    const q = new URL(req.url, 'http://x').searchParams
-    const names = (q.get('names') || '').split(',').map((s) => s.trim()).filter(Boolean)
-    try {
-      const foods = await getFoods(who.userId)
-      if (!names.length) return send(res, 200, { foods: Object.values(foods) })
-      const found = {}, missing = [], similar = {}
-      for (const name of names) {
-        const hit = await getFood(who.userId, name)
-        if (hit) { found[name] = hit; continue }
-        missing.push(name)
-        const near = await findSimilar(who.userId, name, foods)
-        if (near) similar[name] = near.food
+  try {
+    if (req.method === 'GET') {
+      const q = new URL(req.url, 'http://x').searchParams
+      const names = (q.get('names') || '').split(',').map((s) => s.trim()).filter(Boolean)
+      const all = await getFoods(who.userId)
+      if (!names.length) return send(res, 200, { foods: Object.values(all) })
+      const hits = {}, misses = []
+      for (const raw of names) {
+        const exact = all[normalize(raw)]
+        if (exact) { hits[normalize(raw)] = exact; continue }
+        const near = await findSimilar(who.userId, raw, all)
+        if (near) hits[near.food.name] = { ...near.food, matched_your_text: raw }
+        else misses.push(raw)
       }
-      return send(res, 200, { found, missing, similar })
-    } catch (err) {
-      return send(res, 500, { error: String(err.message ?? err) })
+      return send(res, 200, { hits, misses })
     }
-  }
 
-  if (req.method === 'POST') {
-    const body = await readBody(req)
-    if (!body.name) return send(res, 400, { error: 'name required' })
-    const bad = FIELDS.filter((k) => k !== 'unit' && !Number.isFinite(Number(body[k])))
-    if (bad.length || !body.unit) return send(res, 400, { error: `missing or non-numeric: ${[...bad, ...(body.unit ? [] : ['unit'])].join(', ')}` })
-    const food = { name: body.name, unit: String(body.unit) }
-    for (const k of FIELDS) if (k !== 'unit') food[k] = Number(body[k])
-    try {
+    if (req.method === 'POST') {
+      const body = await readBody(req)
+      if (!body.name || !body.unit) return send(res, 400, { error: 'name and unit required' })
+      const bad = NUMS.filter((k) => !Number.isFinite(Number(body[k])))
+      if (bad.length) return send(res, 400, { error: `missing or non-numeric: ${bad.join(', ')}` })
+
+      const all = await getFoods(who.userId)
+      const near = all[normalize(body.name)] ? null : await findSimilar(who.userId, body.name, all)
+      if (near) {
+        return send(res, 409, {
+          error: 'similar_food_already_exists', existing: near.food.name,
+          detail: `"${body.name}" is the same as "${near.food.name}" which you already have. ` +
+            `Use "${near.food.name}" in log_meal, or give a genuinely different food a clearly different name.`,
+        })
+      }
+      const food = { name: body.name.trim(), unit: String(body.unit) }
+      for (const k of NUMS) food[k] = Number(body[k])
       await putFood(who.userId, food)
       return send(res, 200, { saved: await getFood(who.userId, body.name) })
-    } catch (err) {
-      return send(res, 500, { error: String(err.message ?? err) })
     }
-  }
 
-  return send(res, 405, { error: 'GET or POST only' })
+    return send(res, 405, { error: 'GET or POST only' })
+  } catch (err) {
+    return send(res, 500, { error: String(err.message ?? err) })
+  }
 }

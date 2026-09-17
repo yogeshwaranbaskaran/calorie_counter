@@ -23,3 +23,5 @@ services:
         sync: false          # signs session cookies AND encrypts users' keys
       - key: OWNER_EMAIL
         sync: false          # this account adopts the pre-accounts data
+      - key: API_TOKEN
+        sync: false          # bearer token for the owner's own scripts (Suno)
