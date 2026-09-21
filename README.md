@@ -65,3 +65,19 @@ history stays consistent and no calories are invented:
 `list` flags a food when its macros do not add up to its calories (4 kcal/g for
 protein and carbs, 9 for fat), when macros exceed 100g in a per-100g food, or
 when it claims more than 900 kcal per 100g.
+
+
+## for friends who want to use it
+
+1. Open https://calorie-counter-oit1.onrender.com and **Continue with Google**.
+2. Google will say *"Google hasn't verified this app"*. That's because it's a
+   private app, not a company. Click **Advanced → Go to Calorie Counter**.
+   It only appears once.
+3. Pick a plan. **Use my own key** is free: get a Gemini API key at
+   https://aistudio.google.com/apikey (Create API key → copy), paste it in.
+   It's stored encrypted and never shown again.
+4. Type what you ate. Correct the numbers on the card if they're off - your
+   corrections are remembered. Weigh food cooked unless you log the raw
+   weight consistently.
+
+Your log is yours alone; nobody else's account can see it.

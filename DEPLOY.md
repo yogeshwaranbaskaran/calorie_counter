@@ -137,7 +137,7 @@ APIs & Services → **Credentials** → Create credentials → **OAuth client ID
 
 ```
 http://localhost:3000/api/auth/callback
-https://calorie-counter-pedb.onrender.com/api/auth/callback
+https://calorie-counter-oit1.onrender.com/api/auth/callback
 ```
 
 Then **OAuth consent screen → Publish**. Leaving it in Testing means only
