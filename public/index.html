@@ -808,15 +808,37 @@ async function settingsScreen() {
 /* ================================================================ chrome */
 const VIEWS = { log: viewLog, trends: viewTrends, body: viewBody, insights: viewInsights }
 
-async function render() {
+// Free hosting sleeps after ~15 minutes idle; the first request after that
+// can take up to a minute or drop entirely. One dropped request is not an
+// outage, so a network failure retries a few times with a visible countdown
+// before it is reported as a problem.
+const RETRY_DELAYS = [3000, 6000, 12000]
+async function render(attempt = 0) {
   cache.day = null
   if (tab !== 'log') cache.range = null
   try { await VIEWS[tab]() }
   catch (e) {
     if (String(e.message).includes('unauthorized')) return
     view.innerHTML = ''
-    view.appendChild(el('card', `<h3>something broke</h3><p class="hint">${esc(e.server ? e.message : "Couldn't reach the server. Is it still running?")}</p>
-      ${e.server && /does not exist/.test(e.message) ? '<p class="hint" style="margin-top:8px">That looks like a database migration that has not been run: <code>npm run db:migrate</code></p>' : ''}`))
+    if (e.server) {
+      return view.appendChild(el('card', `<h3>something broke</h3><p class="hint">${esc(e.message)}</p>
+        ${/does not exist/.test(e.message) ? '<p class="hint" style="margin-top:8px">That looks like a database migration that has not been run: <code>npm run db:migrate</code></p>' : ''}`))
+    }
+    if (attempt < RETRY_DELAYS.length) {
+      const wait = RETRY_DELAYS[attempt]
+      const card = el('card', `<h3>waking the server up</h3><p class="hint">Free hosting sleeps when idle. Retrying in <b id="cd">${wait / 1000}</b>s…</p>`)
+      view.appendChild(card)
+      let left = wait / 1000
+      const tick = setInterval(() => { left--; const c = card.querySelector('#cd'); if (c) c.textContent = left }, 1000)
+      await new Promise((r) => setTimeout(r, wait))
+      clearInterval(tick)
+      return render(attempt + 1)
+    }
+    const card = el('card', `<h3>still can't reach the server</h3>
+      <p class="hint">Tried ${RETRY_DELAYS.length + 1} times. Check your connection, then try again.</p>
+      <div class="acts"><button class="b go" id="again">try again</button></div>`)
+    card.querySelector('#again').onclick = () => render(0)
+    view.appendChild(card)
   }
 }
 function switchTab(name) {
