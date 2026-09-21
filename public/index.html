@@ -848,7 +848,10 @@ const screen = (html) => { document.body.innerHTML = `<div class="gate">${html}<
 function signInScreen(error) {
   screen(`<h2>Calorie Counter</h2><p>Tell it what you ate. It works out the calories, you confirm, it's logged.</p>
     ${error ? `<p class="err" style="margin-bottom:14px">${esc(error)}</p>` : ''}
-    <a class="gsi" href="/api/auth/start">${GOOGLE_SVG}Continue with Google</a>`)
+    <a class="gsi" href="/api/auth/start">${GOOGLE_SVG}Continue with Google</a>
+    <p style="margin-top:18px;font-size:13px;color:var(--faint)">A food and weight tracker. You type what you ate,
+      it works out the nutrition, you confirm. Your log is yours alone.
+      <a href="/privacy.html" style="color:var(--muted)">Privacy</a></p>`)
 }
 function planScreen(user, note) {
   screen(`<h2>Choose how you pay for the AI</h2>
