@@ -94,7 +94,11 @@ export const newState = () => randomBytes(16).toString('base64url')
 
 // Users' Gemini keys are credentials, so they are encrypted at rest rather
 // than sat in a column in the clear, and never sent back to the browser.
-const keyMaterial = () => scryptSync(SECRET, 'gemini-key-v1', 32)
+// scrypt is slow on purpose - that is the point of it - but the derived key
+// never changes for a given SECRET, so deriving it on every request was a
+// few hundred milliseconds of CPU for nothing. Derive once, keep it.
+let _keyMaterial = null
+const keyMaterial = () => (_keyMaterial ??= scryptSync(SECRET, 'gemini-key-v1', 32))
 
 export function encryptKey(plain) {
   const iv = randomBytes(12)
