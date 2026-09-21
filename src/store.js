@@ -122,16 +122,21 @@ export async function putFood(userId, food) {
     foods[row.name] = { ...row, confirmed_at: new Date().toISOString() }
     return writeJson('foods.json', foods)
   }
-  // Upsert on (user_id, name), so re-confirming amends in place and two users
-  // can each own a food called "dosa".
+  // Update-then-insert rather than ON CONFLICT: a unique index treats NULLs as
+  // distinct, so in single-user mode (user_id NULL) ON CONFLICT never fires and
+  // every correction inserted a second row. This form works for both modes.
+  const vals = [row.unit, row.grams_per_unit, row.kcal, row.protein_g, row.carbs_g, row.fat_g, row.sugar_g]
+  const updated = await q(
+    `update foods set unit=$3, grams_per_unit=$4, kcal=$5, protein_g=$6, carbs_g=$7, fat_g=$8, sugar_g=$9,
+       confirmed_at = now()
+     where user_id is not distinct from $1 and name = $2 returning id`,
+    [userId, row.name, ...vals]
+  )
+  if (updated.length) return
   await q(
     `insert into foods (user_id, name, unit, grams_per_unit, kcal, protein_g, carbs_g, fat_g, sugar_g, confirmed_at)
-     values ($1,$2,$3,$4,$5,$6,$7,$8,$9, now())
-     on conflict (user_id, name) do update set
-       unit = excluded.unit, grams_per_unit = excluded.grams_per_unit,
-       kcal = excluded.kcal, protein_g = excluded.protein_g, carbs_g = excluded.carbs_g,
-       fat_g = excluded.fat_g, sugar_g = excluded.sugar_g, confirmed_at = now()`,
-    [userId, row.name, row.unit, row.grams_per_unit, row.kcal, row.protein_g, row.carbs_g, row.fat_g, row.sugar_g]
+     values ($1,$2,$3,$4,$5,$6,$7,$8,$9, now())`,
+    [userId, row.name, ...vals]
   )
 }
 
@@ -220,10 +225,11 @@ export async function putWeight(userId, date, kg) {
     all.push({ date, kg })
     return writeJson('weights.json', all)
   }
-  await q(
-    `insert into weights (user_id, date, kg) values ($1,$2,$3)
-     on conflict (user_id, date) do update set kg = excluded.kg`,
+  // Same NULL-safe update-then-insert as putFood.
+  const upd = await q(
+    'update weights set kg = $3 where user_id is not distinct from $1 and date = $2 returning id',
     [userId, date, kg])
+  if (!upd.length) await q('insert into weights (user_id, date, kg) values ($1,$2,$3)', [userId, date, kg])
 }
 
 export async function deleteWeight(userId, date) {

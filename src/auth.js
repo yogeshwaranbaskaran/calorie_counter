@@ -135,6 +135,12 @@ export async function upsertUser({ sub, email, name, picture }) {
 // The data logged before accounts existed has user_id NULL. The owner claims
 // it on first sign-in, so the original 158 entries are not stranded.
 async function adoptOrphans(userId) {
+  // Single-user mode could leave the same food name twice (see putFood). The
+  // unique index on (user_id, name) would refuse to adopt both, so keep the
+  // most recently confirmed copy of each and drop the rest first.
+  await sql(`delete from foods f using foods g
+             where f.user_id is null and g.user_id is null and f.name = g.name
+               and (f.confirmed_at < g.confirmed_at or (f.confirmed_at = g.confirmed_at and f.id < g.id))`)
   await sql('update foods set user_id = $1 where user_id is null', [userId])
   await sql('update log_entries set user_id = $1 where user_id is null', [userId])
 }
