@@ -1,0 +1,56 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Privacy — Calorie Counter</title>
+<style>
+  body{background:#0b0d10;color:#eef0f3;font:16px/1.65 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;margin:0;padding:32px 20px 60px;max-width:640px;margin-inline:auto}
+  h1{font-size:26px;margin:0 0 4px}
+  .sub{color:#8e96a1;font-size:14px;margin:0 0 28px}
+  h2{font-size:15px;margin:26px 0 6px;color:#8e96a1;text-transform:uppercase;letter-spacing:.06em}
+  p{margin:0 0 12px}
+  a{color:#7dd88f}
+  ul{padding-left:20px;margin:0 0 12px}
+</style>
+</head>
+<body>
+<h1>Privacy</h1>
+<p class="sub">Calorie Counter · last updated 21 September 2026</p>
+
+<p>Calorie Counter is a small food and weight tracker run by one person for
+themselves and a few friends. It is not a company, it has no analytics, no
+advertising, and nothing is sold or shared.</p>
+
+<h2>What is stored</h2>
+<ul>
+  <li><b>Your Google account's</b> email address, display name and profile picture, used only to sign you in and show who is signed in.</li>
+  <li><b>What you log:</b> the foods you eat, their quantities and nutrition, your weight readings, and any targets you set.</li>
+  <li><b>Optionally, a Gemini API key</b> you choose to provide. It is encrypted before it is stored and is never shown back to you or anyone else.</li>
+</ul>
+
+<h2>Who can see it</h2>
+<p>Only you. Every record is tied to your account and served only to a
+signed-in session for that account. The person running the service can
+technically access the database, and does not look at other people's logs.</p>
+
+<h2>Where it goes</h2>
+<p>When you log a meal, the text you typed is sent to Google's Gemini API to
+work out its nutrition, using either your own key or the app's. Google's
+handling of that request is governed by
+<a href="https://ai.google.dev/gemini-api/terms">Google's Gemini API terms</a>.
+Nothing else leaves the service. Data is stored in a Postgres database hosted
+by Neon and the app runs on Render.</p>
+
+<h2>Cookies</h2>
+<p>One cookie, to keep you signed in for 30 days. No tracking cookies.</p>
+
+<h2>Deleting your data</h2>
+<p>Any entry, weight reading or food can be removed inside the app. To delete
+your account and everything with it, email the address below and it will be
+removed from the database.</p>
+
+<h2>Contact</h2>
+<p><a href="mailto:yogeshwaranb2004@gmail.com">yogeshwaranb2004@gmail.com</a></p>
+</body>
+</html>
