@@ -201,3 +201,30 @@ deploying. It adds the `weights` table, `meal` on entries and target columns
 on users. Safe on live data; nothing existing changes.
 
 No new environment variables.
+
+---
+
+# speed: put Render next to the database
+
+Measured 2026-09-21: phone in Tokyo, Render in **San Francisco**, Neon in
+**Singapore**. Every API call crossed the Pacific twice and ran three
+sequential ~180ms queries. Navigation took 2-3 seconds.
+
+Code-side fixes (warm connections, cached user, cached days) roughly halve
+it. The rest is geography, and the fix is to create the Render service in
+**Singapore** so it sits beside Neon (~2ms per query instead of ~180ms).
+
+Render cannot move an existing service between regions, so this is a new
+service with a new URL:
+
+1. Render → New → Web Service → connect the repo → **Region: Singapore**
+2. Copy every environment variable from the old service (Environment tab)
+3. Deploy; note the new `https://calorie-counter-XXXX.onrender.com`
+4. Google Cloud → Credentials → the OAuth client → add the new callback URI
+   `https://<new-host>/api/auth/callback`; Branding → update home page,
+   privacy URL, authorized domain
+5. Re-point the keep-alive ping (cron-job.org) at the new `/api/health`
+6. Delete the old service; re-add the app to your phone's home screen
+
+Nothing in the database changes. Sessions carry over because SESSION_SECRET
+is the same.
