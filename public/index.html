@@ -308,7 +308,10 @@ let history = []
 let chat = []
 let me = null
 let pass = localStorage.getItem('passcode') || ''
-const cache = { day: null, range: null, body: null, insights: null }
+// Days already fetched are kept, so stepping back to one you just looked at
+// is instant. Anything that writes clears the lot.
+const cache = { days: new Map(), range: null, body: null, insights: null }
+const forget = () => { cache.days.clear(); cache.range = null; cache.body = null }
 let pickedDay = null
 
 const headers = () => ({ 'content-type': 'application/json', 'x-passcode': pass })
@@ -514,7 +517,10 @@ function intro() {
   return box
 }
 
-async function loadDay() { return (cache.day ??= await api(`/api/day?date=${logDate}`)) }
+async function loadDay() {
+  if (!cache.days.has(logDate)) cache.days.set(logDate, api(`/api/day?date=${logDate}`).catch((e) => { cache.days.delete(logDate); throw e }))
+  return cache.days.get(logDate)
+}
 async function loadRange(days = 7) {
   if (cache.range?.n !== days) cache.range = { n: days, p: api(`/api/range?days=${days}`) }
   return cache.range.p
@@ -539,7 +545,7 @@ async function viewLog() {
       row.querySelector('.x').onclick = async () => {
         row.style.opacity = .4
         const out = await api(`/api/entry?id=${row.dataset.id}`, { method: 'DELETE' })
-        out.deleted ? (cache.day = null, cache.range = null, render()) : (row.style.opacity = 1)
+        out.deleted ? (forget(), render()) : (row.style.opacity = 1)
       }
     })
     view.appendChild(box)
@@ -617,7 +623,7 @@ function proposalCard(p) {
       const edits = (out.corrected ?? []).map((c) => `${c.name} is ${c.to} kcal each, not ${c.from}`)
       history.push({ role: 'user', text: `(I confirmed and logged: ${items.map((i) => `${i.qty} x ${i.name}`).join(', ')}` + (edits.length ? `. Remember: ${edits.join('; ')}` : '') + ')' })
       if (edits.length) bubble('tools', `learned · ${edits.join('; ')}`)
-      cache.day = null; cache.range = null; cache.body = null
+      forget()
       render()
     } else bubble('err', out.error || 'could not save')
   }
@@ -794,13 +800,14 @@ async function settingsScreen() {
     <div class="acts"><button class="b" id="back">back</button><button class="b go" id="save">save</button></div>
     ${me?.signedIn ? `<div class="acts"><button class="b" id="plan">AI plan & key</button><a class="b" href="/api/auth/logout" style="text-align:center;text-decoration:none">sign out</a></div>` : ''}`)
   view.appendChild(box)
-  const leave = () => { $('bar').hidden = false; cache.day = null; cache.body = null; render() }
+  const leave = () => { $('bar').hidden = false; render() }
   box.querySelector('#back').onclick = leave
   box.querySelector('#plan')?.addEventListener('click', () => planScreen(me.user))
   box.querySelector('#save').onclick = async () => {
     const body = {}
     for (const k of ['target_kcal', 'target_protein_g', 'target_carbs_g', 'target_fat_g', 'target_sugar_g', 'goal_kg', 'height_cm']) body[k] = box.querySelector(`#t_${k}`).value
     await api('/api/targets', { method: 'POST', body: JSON.stringify(body) })
+    forget()
     leave()
   }
 }
@@ -814,8 +821,6 @@ const VIEWS = { log: viewLog, trends: viewTrends, body: viewBody, insights: view
 // before it is reported as a problem.
 const RETRY_DELAYS = [3000, 6000, 12000]
 async function render(attempt = 0) {
-  cache.day = null
-  if (tab !== 'log') cache.range = null
   try { await VIEWS[tab]() }
   catch (e) {
     if (String(e.message).includes('unauthorized')) return
@@ -856,7 +861,7 @@ function setDay(iso) {
   $('daybar').classList.toggle('past', past)
   $('daytag').innerHTML = `<b>${dayName(logDate)}</b>${past ? 'backfilling' : shortDate(logDate)}`
   $('next').disabled = !past
-  chat = []; history = []; cache.day = null
+  chat = []; history = []
   render()
 }
 $('prev').onclick = () => setDay(shiftIso(logDate, -1))
