@@ -128,6 +128,7 @@ export async function upsertUser({ sub, email, name, picture }) {
     [sub, email, name ?? null, picture ?? null]
   )
   const user = rows[0]
+  forgetUser(user.id)
   if (OWNER && email.toLowerCase() === OWNER) await adoptOrphans(user.id)
   return user
 }
@@ -145,14 +146,26 @@ async function adoptOrphans(userId) {
   await sql('update log_entries set user_id = $1 where user_id is null', [userId])
 }
 
+// Every request resolved the user with a database round trip - to a server
+// on another continent, that alone was ~200ms. A one-minute cache removes it
+// from the hot path; anything that changes the row invalidates it.
+const userCache = new Map()
+const USER_TTL = 60_000
+
 export async function getUser(id) {
+  const hit = userCache.get(id)
+  if (hit && hit.at > Date.now() - USER_TTL) return hit.user
   const rows = await sql('select * from users where id = $1', [id])
-  return rows[0] ?? null
+  const user = rows[0] ?? null
+  if (user) userCache.set(id, { user, at: Date.now() })
+  return user
 }
+export const forgetUser = (id) => userCache.delete(id)
 
 export async function setPlan(id, plan, geminiKey) {
   await sql('update users set plan = $1, gemini_key = $2 where id = $3',
     [plan, geminiKey ? encryptKey(geminiKey) : null, id])
+  forgetUser(id)
 }
 
 // Which Gemini key a user's requests should use.

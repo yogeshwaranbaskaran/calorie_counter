@@ -52,8 +52,12 @@ async function pool() {
       // verification is off there; a local database over plain TCP has no TLS
       // at all, so do not demand it.
       ssl: plain ? false : { rejectUnauthorized: false },
-      max: 3, // a free Render instance serving one person needs very little
-      idleTimeoutMillis: 30_000,
+      max: 3, // a free Render instance serving a few people needs very little
+      // A fresh TLS connection to a database on another continent costs
+      // ~800ms. With 30s idle, nearly every request paid it. Keep connections
+      // for 15 minutes; the /api/health keep-alive ping lands well inside that.
+      idleTimeoutMillis: 15 * 60_000,
+      keepAlive: true,
     })
   })()
   return poolPromise
@@ -263,6 +267,7 @@ export async function setTargets(userId, t) {
   }
   const sets = TARGET_KEYS.map((k, i) => `${k} = $${i + 2}`).join(', ')
   await q(`update users set ${sets} where id = $1`, [userId, ...TARGET_KEYS.map((k) => clean[k])])
+  ;(await import('./auth.js')).forgetUser(userId)
 }
 
 export const backend = () => (remote ? 'postgres' : 'json')
