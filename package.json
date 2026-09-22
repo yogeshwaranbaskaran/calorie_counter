@@ -12,7 +12,8 @@
     "foods": "node --env-file=.env src/foodfix.js",
     "start": "node server.js",
     "migrate": "node --env-file=.env src/migrate.js",
-    "db:migrate": "node --env-file=.env src/dbmigrate.js"
+    "db:migrate": "node --env-file=.env src/dbmigrate.js",
+    "library:load": "node --env-file=.env src/library-load.js"
   },
   "dependencies": {
     "pg": "^8.23.0"

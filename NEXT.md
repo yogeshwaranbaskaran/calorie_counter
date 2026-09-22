@@ -5,11 +5,11 @@ v1 shipped 2026-09-21 at https://calorie-counter-oit1.onrender.com
 
 ## before inviting more than a few friends
 
-- **Starter food library.** Every new account begins empty and spends a week
-  teaching the agent. A shared library the agent falls back to when the
-  personal table misses (personal first, library second, estimate last;
-  corrections always write personal) fixes the cold start. Library rows =
-  `user_id NULL` after a curated seed. ~1 hour.
+- ~~Starter food library~~ **DONE 2026-09-22**: `food_library` holds 8,061 USDA
+  foods (SR Legacy + Foundation, per 100g, public domain). The agent calls
+  `search_library` before estimating; corrections still write to the personal
+  table. Refresh with `node src/usda-extract.js <csv dirs>` then
+  `npm run library:load`. Still weak on Indian dishes - that stays estimated.
 - **Hosted plan hard stop.** `plan = 'hosted'` currently works and shows a
   notice. Once payments exist: gate `/api/chat` on a paid flag.
 - **Per-user daily cap** on the owner's key, so one account cannot drain the

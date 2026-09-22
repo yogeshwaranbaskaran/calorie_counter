@@ -35,8 +35,21 @@ Zero npm dependencies. Node 18+ for native fetch.
     api/            handlers: chat, commit, day, entry, range, insights
     public/         installable PWA, one HTML file
     cli.js          terminal front end
-    db/001_schema.sql   Postgres schema
+    db/             Postgres schema + migrations (npm run db:migrate)
+    data/usda.json  8,061 USDA foods per 100g - the shared reference library
     src/migrate.js  copies local JSON into the database
+
+## where the numbers come from, in order
+
+1. **Your own table** - foods you have confirmed or corrected. Always first.
+2. **The USDA library** - 8,061 measured foods (`search_library`). Raw
+   ingredients, meat, eggs, grains, dairy, fruit, veg. Public domain.
+3. **The model's estimate** - only for dishes the library has no idea about
+   (dosa, sambar, a bento). It says what it assumed; you correct it once.
+
+Load or refresh the library with `npm run library:load` (reads
+`data/usda.json`, produced by `src/usda-extract.js` from the FoodData Central
+CSV dumps).
 
 ## the rules that keep the numbers honest
 

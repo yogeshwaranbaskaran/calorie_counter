@@ -270,4 +270,36 @@ export async function setTargets(userId, t) {
   ;(await import('./auth.js')).forgetUser(userId)
 }
 
+/* ---------------------------------------------------------------- library */
+
+// Shared reference data (USDA), per 100g. Every query word must appear in the
+// name; shortest names first, because in USDA naming the shortest match is
+// the plainest form ("Chicken, breast, raw" before the "with added solution"
+// variants). Falls back to any-word matching, ranked by words hit, when the
+// strict search finds nothing.
+export async function searchLibrary(query, limit = 6) {
+  const words = String(query).toLowerCase().replace(/[^a-z0-9 ]/g, ' ').split(/\s+/).filter((w) => w.length > 1)
+  if (!words.length) return []
+  if (!remote) {
+    let rows = []
+    try { rows = JSON.parse(await readFile(join(DATA, 'usda.json'), 'utf8')) } catch { return [] }
+    const score = (r) => words.filter((w) => r.name.toLowerCase().includes(w)).length
+    const strict = rows.filter((r) => score(r) === words.length).sort((a, b) => a.name.length - b.name.length)
+    const pool_ = strict.length ? strict : rows.filter((r) => score(r) > 0).sort((a, b) => score(b) - score(a) || a.name.length - b.name.length)
+    return pool_.slice(0, limit)
+  }
+  const cols = 'id, source, name, category, kcal, protein_g, carbs_g, fat_g, sugar_g, fiber_g'
+  const strict = await q(
+    `select ${cols} from food_library where ${words.map((_, i) => `name ilike $${i + 1}`).join(' and ')}
+     order by length(name) limit $${words.length + 1}`,
+    [...words.map((w) => `%${w}%`), limit])
+  if (strict.length) return strict.map(num)
+  const loose = await q(
+    `select ${cols}, (${words.map((_, i) => `(name ilike $${i + 1})::int`).join(' + ')}) as hits
+     from food_library where ${words.map((_, i) => `name ilike $${i + 1}`).join(' or ')}
+     order by hits desc, length(name) limit $${words.length + 1}`,
+    [...words.map((w) => `%${w}%`), limit])
+  return loose.map(num)
+}
+
 export const backend = () => (remote ? 'postgres' : 'json')

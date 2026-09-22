@@ -1,7 +1,7 @@
 // What the agent can DO. Note what is NOT here: there is no "estimate calories"
 // tool. Estimating is thinking, and the model already thinks. Tools exist only
 // for what it CANNOT do - read the table, write the table.
-import { getFood, getFoods, putFood, appendLog, getLog, normalize, localDate } from './store.js'
+import { getFood, getFoods, putFood, appendLog, getLog, searchLibrary, normalize, localDate } from './store.js'
 
 const S = 'STRING'
 const N = 'NUMBER'
@@ -17,6 +17,20 @@ export const declarations = [
       type: 'OBJECT',
       properties: { names: { type: 'ARRAY', items: { type: S } } },
       required: ['names'],
+    },
+  },
+  {
+    name: 'search_library',
+    description:
+      'Search the USDA reference database (about 8,000 foods, values per 100g). ' +
+      'Use it for a food that is NOT in the user\'s own table before estimating - ' +
+      'raw ingredients, meats, grains, dairy, fruit and vegetables are all here and ' +
+      'measured, not guessed. Query with a few plain words: "chicken breast raw", ' +
+      '"rice white cooked", "egg whole raw". Returns the closest matches.',
+    parameters: {
+      type: 'OBJECT',
+      properties: { query: { type: S, description: 'a few words describing the food' } },
+      required: ['query'],
     },
   },
   {
@@ -262,6 +276,19 @@ export function makeTools({ propose, forDate, userId = null }) {
         else misses.push(raw)
       }
       return { hits, misses }
+    },
+
+    async search_library({ query }) {
+      const rows = await searchLibrary(query, 6)
+      if (!rows.length) return { matches: [], note: 'nothing in the library matches; estimate it yourself' }
+      return {
+        per: '100g',
+        matches: rows.map((r) => ({
+          name: r.name, kcal: r.kcal, protein_g: r.protein_g, carbs_g: r.carbs_g,
+          fat_g: r.fat_g, sugar_g: r.sugar_g, source: r.source,
+        })),
+        how_to_use: 'Pick the best match. Save it with save_food using a SHORT everyday name the user would say ("chicken breast raw", not the USDA sentence). Prefer unit "g" with grams_per_unit 100 and these values as they are. If you convert to a piece instead (an egg, a banana), scale EVERY value by the same factor - kcal, protein, carbs, fat AND sugar - not just some of them.',
+      }
     },
 
     async save_food(args) {
