@@ -1,152 +1,128 @@
-// Maintenance for the food table. The agent creates a new food whenever you
-// phrase something differently, so duplicates and wrong units accumulate:
+// Maintenance for a user's food table, against the live database.
 //
-//   node src/foodfix.js list
-//   node src/foodfix.js setunit "icecream" piece 150 300
-//   node src/foodfix.js merge "300 cal icecream" "icecream"
+//   npm run foods list                          usage counts + sanity flags
+//   npm run foods dupes                         likely duplicates, with the merge command
+//   npm run foods rename "old name" "new name"
+//   npm run foods merge  "from" "into"          repoints history to "into", removes "from"
+//   npm run foods set    "name" kcal=121 protein_g=20 fat_g=4.5 unit=g grams_per_unit=100
+//   npm run foods delete "name"                 only if nothing in the log uses it
 //
-// Every command rewrites the affected LOG ENTRIES too, using each entry's
-// stored gram weight as the source of truth, so history stays consistent and
-// no calories are invented.
-import { getFoods, putFood, getLog, normalize } from './store.js'
+// History is repointed BY NAME ONLY. What you ate on a day stays exactly as it
+// was logged that day; a corrected food applies from the next log onward.
+// Rewriting past calories to match a later correction would make the weight
+// trend and the intake it is compared against disagree.
+//
+// Scope: the owner (OWNER_EMAIL), or FOODFIX_USER=<id>; user_id NULL in
+// single-user mode.
+import { sql, usingPostgres, getFoods, putFood, normalize } from './store.js'
 import { similarity } from './tools.js'
-import { readFile, writeFile } from 'node:fs/promises'
-import { join, dirname } from 'node:path'
-import { fileURLToPath } from 'node:url'
 
-const DATA = join(dirname(fileURLToPath(import.meta.url)), '..', 'data')
 const round = (n) => Math.round(n * 10) / 10
-const readLog = async () => JSON.parse(await readFile(join(DATA, 'log.json'), 'utf8'))
-const writeLog = (v) => writeFile(join(DATA, 'log.json'), JSON.stringify(v, null, 2))
-const writeFoods = (v) => writeFile(join(DATA, 'foods.json'), JSON.stringify(v, null, 2))
-
 const basisOf = (unit) => (['g', 'ml'].includes(String(unit).toLowerCase()) ? 100 : 1)
 
-// Rebuild one entry against a food definition, keeping the grams the user
-// actually ate. That is the one fact a unit change must not alter.
-function reprice(entry, food, grams) {
-  const basis = basisOf(food.unit)
-  const qty = basis === 100 ? grams : grams / food.grams_per_unit
-  const f = qty / basis
-  return {
-    ...entry,
-    name: food.name,
-    unit: food.unit,
-    qty: round(qty),
-    grams: round(grams),
-    kcal: Math.round(food.kcal * f),
-    protein_g: round(food.protein_g * f),
-    carbs_g: round(food.carbs_g * f),
-    fat_g: round(food.fat_g * f),
-    sugar_g: round(food.sugar_g * f),
+async function whoami() {
+  if (!usingPostgres()) return null
+  if (process.env.FOODFIX_USER) return Number(process.env.FOODFIX_USER)
+  const owner = (process.env.OWNER_EMAIL || '').toLowerCase()
+  if (owner) {
+    const r = await sql('select id from users where lower(email) = $1', [owner])
+    if (r[0]) return r[0].id
   }
+  const users = await sql('select id, email from users order by id')
+  if (users.length === 1) return users[0].id
+  if (!users.length) return null
+  throw new Error(`several users - set OWNER_EMAIL or FOODFIX_USER. ${users.map((u) => `${u.id}=${u.email}`).join(', ')}`)
 }
 
+const userId = await whoami()
+const U = 'user_id is not distinct from $1'
 const [cmd, ...args] = process.argv.slice(2)
-const foods = await getFoods(null)
-const log = await readLog()
+
+const usage = async () => {
+  const rows = await sql(`select name, count(*)::int n from log_entries where ${U} group by name`, [userId])
+  return Object.fromEntries(rows.map((r) => [r.name, r.n]))
+}
 
 if (cmd === 'list') {
-  const counts = {}
-  for (const r of log) counts[r.name] = (counts[r.name] ?? 0) + 1
-  const rows = Object.values(foods).map((f) => {
-    // 4 kcal/g for protein and carbs, 9 for fat. A big gap means the model
-    // mixed a per-100g breakdown into a per-piece food, or simply guessed.
-    const fromMacros = f.protein_g * 4 + f.carbs_g * 4 + f.fat_g * 9
-    const off = f.kcal ? Math.abs(fromMacros - f.kcal) / f.kcal : 0
+  const foods = Object.values(await getFoods(userId))
+  const used = await usage()
+  const rows = foods.map((f) => {
+    const implied = f.protein_g * 4 + f.carbs_g * 4 + f.fat_g * 9
     const flags = []
-    // Below ~30 kcal the ratio is meaningless - black coffee at 5 kcal with no
-    // macros is correct, not suspicious.
-    if (f.kcal >= 30 && off > 0.35) flags.push(`macros imply ${Math.round(fromMacros)} kcal`)
-    if (basisOf(f.unit) === 100 && f.carbs_g + f.protein_g + f.fat_g > 100) flags.push('macros exceed 100g')
+    if (f.kcal >= 30 && Math.abs(implied - f.kcal) / f.kcal > 0.35) flags.push(`macros imply ${Math.round(implied)} kcal`)
+    if (basisOf(f.unit) === 100 && f.protein_g + f.carbs_g + f.fat_g > 100) flags.push('macros exceed 100g')
     if (basisOf(f.unit) === 100 && f.kcal > 900) flags.push('over 900 kcal/100g')
-    return { name: f.name, unit: f.unit, kcal: f.kcal, used: counts[f.name] ?? 0, flags }
-  }).sort((a, b) => b.used - a.used)
-
+    if (/\d/.test(f.name)) flags.push('number in name')
+    return { ...f, used: used[f.name] ?? 0, flags }
+  }).sort((a, b) => b.used - a.used || a.name.localeCompare(b.name))
   for (const r of rows) {
-    console.log(
-      `${String(r.used).padStart(3)}x  ${r.name.padEnd(36)} 1 ${String(r.unit).padEnd(8)} ${String(r.kcal).padStart(5)} kcal` +
-      (r.flags.length ? `   <-- ${r.flags.join('; ')}` : '')
-    )
+    console.log(`${String(r.used).padStart(3)}x  ${r.name.padEnd(34)} 1 ${String(r.unit).padEnd(7)} ${String(r.grams_per_unit).padStart(4)}g ${String(r.kcal).padStart(5)} kcal  P${String(r.protein_g).padEnd(5)}C${String(r.carbs_g).padEnd(6)}F${String(r.fat_g).padEnd(5)}${r.flags.length ? '  <-- ' + r.flags.join('; ') : ''}`)
   }
-  console.log(`\n${rows.length} foods, ${rows.filter((r) => r.flags.length).length} suspicious, ` +
-    `${rows.filter((r) => !r.used).length} never used`)
+  console.log(`\n${rows.length} foods, ${rows.filter((r) => r.flags.length).length} flagged, ${rows.filter((r) => !r.used).length} never used`)
 }
 
 else if (cmd === 'dupes') {
-  // Same scoring the agent uses at save time, applied to what is already
-  // stored - so the table can be cleaned with the same definition of "same".
-  const counts = {}
-  for (const r of log) counts[r.name] = (counts[r.name] ?? 0) + 1
-  const names = Object.values(foods).map((f) => f.name)
+  const names = Object.keys(await getFoods(userId))
+  const used = await usage()
   const pairs = []
-  for (let i = 0; i < names.length; i++) {
-    for (let j = i + 1; j < names.length; j++) {
-      const score = similarity(names[i], names[j])
-      if (score >= 0.8) pairs.push({ a: names[i], b: names[j], score })
-    }
+  for (let i = 0; i < names.length; i++) for (let j = i + 1; j < names.length; j++) {
+    const score = similarity(names[i], names[j])
+    if (score >= 0.8) pairs.push({ a: names[i], b: names[j], score })
   }
   pairs.sort((x, y) => y.score - x.score)
   for (const { a, b, score } of pairs) {
-    // Merge into whichever is used more; ties go to the longer, more specific name.
-    const [into, from] = (counts[a] ?? 0) >= (counts[b] ?? 0) ? [a, b] : [b, a]
-    console.log(`${score.toFixed(2)}  "${from}" (${counts[from] ?? 0}x)  ->  "${into}" (${counts[into] ?? 0}x)`)
+    const [into, from] = (used[a] ?? 0) >= (used[b] ?? 0) ? [a, b] : [b, a]
+    console.log(`${score.toFixed(2)}  "${from}" (${used[from] ?? 0}x)  ->  "${into}" (${used[into] ?? 0}x)`)
     console.log(`        npm run foods merge ${JSON.stringify(from)} ${JSON.stringify(into)}`)
   }
   console.log(`\n${pairs.length} candidate pairs at >= 0.80`)
 }
 
-else if (cmd === 'setunit') {
-  const [name, unit, gramsPerUnit, kcal] = args
-  const key = normalize(name)
-  const food = foods[key]
-  if (!food) throw new Error(`no such food: ${name}`)
-
-  // Macros are stated per unit, so rescale them by how much the unit grew.
-  const oldPer = food.grams_per_unit * (basisOf(food.unit) === 100 ? 1 : 1)
-  const ratio = (Number(gramsPerUnit) / oldPer) * (basisOf(food.unit) === 100 ? 1 : 1)
-  const updated = {
-    ...food,
-    unit,
-    grams_per_unit: Number(gramsPerUnit),
-    kcal: Number(kcal),
-    protein_g: round(food.protein_g * ratio),
-    carbs_g: round(food.carbs_g * ratio),
-    fat_g: round(food.fat_g * ratio),
-    sugar_g: round(food.sugar_g * ratio),
-  }
-  await putFood(null, updated)
-
-  let touched = 0
-  const next = log.map((r) => {
-    if (normalize(r.name) !== key) return r
-    touched++
-    return reprice(r, updated, r.grams ?? 0)
-  })
-  await writeLog(next)
-  console.log(`${food.name}: 1 ${food.unit} (${food.grams_per_unit}g, ${food.kcal} kcal)`)
-  console.log(`        -> 1 ${unit} (${gramsPerUnit}g, ${kcal} kcal), ${touched} entries rewritten`)
+else if (cmd === 'rename') {
+  const [from, to] = args.map(normalize)
+  const foods = await getFoods(userId)
+  if (!foods[from]) throw new Error(`no such food: ${from}`)
+  if (foods[to]) throw new Error(`"${to}" already exists - use merge`)
+  await sql(`update foods set name = $2 where ${U} and name = $3`, [userId, to, from])
+  const r = await sql(`update log_entries set name = $2 where ${U} and name = $3 returning id`, [userId, to, from])
+  console.log(`renamed "${from}" -> "${to}", ${r.length} log entries repointed`)
 }
 
 else if (cmd === 'merge') {
-  const [from, into] = args
-  const a = normalize(from), b = normalize(into)
-  const target = foods[b]
-  if (!foods[a]) throw new Error(`no such food: ${from}`)
-  if (!target) throw new Error(`no such food: ${into}`)
+  const [from, into] = args.map(normalize)
+  const foods = await getFoods(userId)
+  if (!foods[from]) throw new Error(`no such food: ${from}`)
+  if (!foods[into]) throw new Error(`no such food: ${into}`)
+  const r = await sql(`update log_entries set name = $2 where ${U} and name = $3 returning id`, [userId, into, from])
+  await sql(`delete from foods where ${U} and name = $2`, [userId, from])
+  console.log(`merged "${from}" into "${into}": ${r.length} log entries repointed, food removed`)
+}
 
-  let touched = 0
-  const next = log.map((r) => {
-    if (normalize(r.name) !== a) return r
-    touched++
-    return reprice(r, target, r.grams ?? 0)
-  })
-  await writeLog(next)
-  delete foods[a]
-  await writeFoods(foods)
-  console.log(`merged "${from}" into "${into}": ${touched} entries repointed, food removed`)
+else if (cmd === 'set') {
+  const [rawName, ...kv] = args
+  const name = normalize(rawName)
+  const foods = await getFoods(userId)
+  const food = foods[name]
+  if (!food) throw new Error(`no such food: ${name}`)
+  const next = { ...food }
+  for (const pair of kv) {
+    const [k, v] = pair.split('=')
+    if (!['unit', 'grams_per_unit', 'kcal', 'protein_g', 'carbs_g', 'fat_g', 'sugar_g'].includes(k)) throw new Error(`unknown field ${k}`)
+    next[k] = k === 'unit' ? v : Number(v)
+  }
+  await putFood(userId, next)
+  console.log(`${name}: 1 ${next.unit} (${next.grams_per_unit}g) = ${next.kcal} kcal  P${next.protein_g} C${next.carbs_g} F${next.fat_g} S${next.sugar_g}`)
+}
+
+else if (cmd === 'delete') {
+  const name = normalize(args[0])
+  const used = await usage()
+  if (used[name]) throw new Error(`"${name}" is used by ${used[name]} log entries - merge it instead`)
+  const r = await sql(`delete from foods where ${U} and name = $2 returning id`, [userId, name])
+  console.log(r.length ? `deleted "${name}"` : `no such food: ${name}`)
 }
 
 else {
-  console.log('usage: foodfix list | setunit <food> <unit> <grams> <kcal> | merge <from> <into>')
+  console.log('usage: foods list | dupes | rename <from> <to> | merge <from> <into> | set <name> k=v ... | delete <name>')
 }
+process.exit(0)

@@ -67,18 +67,18 @@ See DEPLOY.md to put it online.
 ## fixing the food table
 
 The agent creates a new food whenever you phrase something differently, so
-duplicates and wrong units accumulate. `src/foodfix.js` repairs both, and
-rewrites the affected log entries using each entry's stored gram weight, so
-history stays consistent and no calories are invented:
+names drift and macros are occasionally wrong. `npm run foods` works on the
+live database for the owner (`OWNER_EMAIL` in `.env`, or `FOODFIX_USER=<id>`):
 
-    npm run foods list                              # usage counts + sanity flags
-    npm run foods setunit "icecream" piece 150 300  # per-100g -> per piece
-    npm run foods merge "300 cal icecream" "icecream"
+    npm run foods list                              usage counts + sanity flags
+    npm run foods dupes                             spelling-level duplicates
+    npm run foods rename "old" "new"
+    npm run foods merge "from" "into"               history repointed, food removed
+    npm run foods set "name" kcal=121 protein_g=20  fix values (also unit=, grams_per_unit=)
+    npm run foods delete "name"                     only if nothing in the log uses it
 
-`list` flags a food when its macros do not add up to its calories (4 kcal/g for
-protein and carbs, 9 for fat), when macros exceed 100g in a per-100g food, or
-when it claims more than 900 kcal per 100g.
-
+History is repointed **by name only** - what you ate on a day keeps the
+numbers it was logged with. A corrected food applies from the next log on.
 
 ## for friends who want to use it
 
