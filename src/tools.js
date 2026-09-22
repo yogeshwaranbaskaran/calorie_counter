@@ -146,6 +146,7 @@ const scale = (food, qty) => {
     // per-unit values and the basis ride along so the review card can edit
     // them and recompute live, without a round trip
     kcal_per_unit: food.kcal,
+    protein_per_unit: food.protein_g,
     basis,
     grams: round((basis === 1 ? food.grams_per_unit * qty : qty)),
     kcal: Math.round(food.kcal * f),
@@ -202,21 +203,33 @@ export async function buildProposal(userId, { date, meal, items = [] }, fallback
 export async function applyCorrections(userId, items = []) {
   const corrected = []
   for (const item of items) {
-    const edit = Number(item.kcal_per_unit)
-    if (!Number.isFinite(edit) || edit <= 0) continue
+    const kcal = Number(item.kcal_per_unit)
+    const protein = Number(item.protein_per_unit)
     const food = await getFood(userId, item.name)
-    if (!food || Math.abs(food.kcal - edit) < 0.5) continue
+    if (!food) continue
+    const kcalChanged = Number.isFinite(kcal) && kcal > 0 && Math.abs(food.kcal - kcal) >= 0.5
+    const proteinChanged = Number.isFinite(protein) && protein >= 0 && Math.abs(food.protein_g - protein) >= 0.05
+    if (!kcalChanged && !proteinChanged) continue
 
-    const ratio = edit / (food.kcal || edit)
-    await putFood(userId, {
+    // Protein is corrected on its own - it is the number the user actually
+    // tracks, and the model's breakdown is often wrong in a way that scaling
+    // by calories makes worse. Carbs, fat and sugar still scale with kcal,
+    // since there is nothing better to go on for them.
+    const ratio = kcalChanged ? kcal / (food.kcal || kcal) : 1
+    const next = {
       ...food,
-      kcal: edit,
-      protein_g: round(food.protein_g * ratio),
+      kcal: kcalChanged ? kcal : food.kcal,
+      protein_g: proteinChanged ? round(protein) : round(food.protein_g * ratio),
       carbs_g: round(food.carbs_g * ratio),
       fat_g: round(food.fat_g * ratio),
       sugar_g: round(food.sugar_g * ratio),
+    }
+    await putFood(userId, next)
+    corrected.push({
+      name: food.name,
+      from: food.kcal, to: next.kcal,
+      ...(proteinChanged ? { protein_from: food.protein_g, protein_to: next.protein_g } : {}),
     })
-    corrected.push({ name: food.name, from: food.kcal, to: edit })
   }
   return corrected
 }

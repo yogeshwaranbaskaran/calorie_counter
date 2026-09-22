@@ -154,7 +154,7 @@ main{flex:1; overflow-y:auto; padding:4px 16px 16px; display:flex; flex-directio
 .prow .pn{display:block; margin-bottom:6px; font-size:14.5px}
 .prow .pctl{display:flex; align-items:center; gap:6px}
 .prow input{
-  width:64px; flex:0 0 auto; padding:7px 8px; font-size:15px; text-align:right;
+  width:54px; flex:0 0 auto; padding:7px 6px; font-size:14px; text-align:right;
   border-radius:9px; border:1px solid var(--line2); background:var(--raised);
   color:var(--text); font-family:inherit; font-variant-numeric:tabular-nums;
 }
@@ -579,24 +579,27 @@ function proposalCard(p) {
     const live = rows.filter((r) => !r.dropped)
     const kcal = live.reduce((t, r) => t + Math.round(r.kcal_per_unit * r.qty / (r.basis || 1)), 0)
     const protein = Math.round(live.reduce((t, r) => {
-      const ratio = r.orig_kcal ? r.kcal_per_unit / r.orig_kcal : 1
+      const ratio = r.proteinEdited ? 1 : (r.orig_kcal ? r.kcal_per_unit / r.orig_kcal : 1)
       return t + r.protein_per_unit * ratio * r.qty / (r.basis || 1)
     }, 0) * 10) / 10
     grand.textContent = `${kcal} kcal · ${protein}g protein`
     box.querySelector('[data-a=yes]').disabled = live.length === 0
-    const changed = rows.filter((r) => !r.dropped && Math.abs(r.kcal_per_unit - r.orig_kcal) >= 0.5)
+    const changed = rows.filter((r) => !r.dropped && (Math.abs(r.kcal_per_unit - r.orig_kcal) >= 0.5 || r.proteinEdited))
     editedNote.hidden = !changed.length
     if (changed.length) editedNote.textContent = `saves the corrected value for ${changed.map((r) => r.name).join(', ')}`
   }
   rows.forEach((r) => {
     r.orig_kcal = r.kcal_per_unit
-    r.protein_per_unit = r.qty ? (r.protein_g * (r.basis || 1)) / r.qty : 0
+    r.orig_protein = r.protein_per_unit ?? 0
+    r.protein_per_unit = r.protein_per_unit ?? (r.qty ? (r.protein_g * (r.basis || 1)) / r.qty : 0)
     const line = el('prow', `<span class="pn">${esc(cap(r.name))}</span>
       <div class="pctl">
         <input class="q" type="number" inputmode="decimal" min="0" step="0.5" value="${r.qty}">
         <span class="unit">${esc(r.basis > 1 ? r.unit : '× ' + r.unit)}</span>
         <input class="k" type="number" inputmode="numeric" min="0" step="5" value="${Math.round(r.kcal_per_unit)}">
-        <span class="unit">kcal${r.basis > 1 ? '/100' + esc(r.unit) : ' each'}</span>
+        <span class="unit">kcal</span>
+        <input class="p" type="number" inputmode="decimal" min="0" step="0.5" value="${Math.round((r.protein_per_unit ?? 0) * 10) / 10}">
+        <span class="unit">P${r.basis > 1 ? '/100' + esc(r.unit) : ''}</span>
         <span class="sub"></span>
         <button class="drop" title="remove">×</button>
       </div>`)
@@ -604,6 +607,7 @@ function proposalCard(p) {
     const redraw = () => { sub.textContent = `${Math.round(r.kcal_per_unit * r.qty / (r.basis || 1))} kcal`; paint() }
     line.querySelector('.q').addEventListener('input', (e) => { const v = parseFloat(e.target.value); r.qty = Number.isFinite(v) && v >= 0 ? v : 0; redraw() })
     line.querySelector('.k').addEventListener('input', (e) => { const v = parseFloat(e.target.value); r.kcal_per_unit = Number.isFinite(v) && v >= 0 ? v : 0; redraw() })
+    line.querySelector('.p').addEventListener('input', (e) => { const v = parseFloat(e.target.value); r.protein_per_unit = Number.isFinite(v) && v >= 0 ? v : 0; r.proteinEdited = true; redraw() })
     line.querySelector('.drop').onclick = () => { r.dropped = true; line.remove(); paint() }
     list.appendChild(line); redraw()
   })
@@ -615,12 +619,16 @@ function proposalCard(p) {
   }
   box.querySelector('[data-a=yes]').onclick = async () => {
     box.querySelectorAll('button').forEach((b) => (b.disabled = true))
-    const items = rows.filter((r) => !r.dropped && r.qty > 0).map((r) => ({ name: r.name, qty: r.qty, kcal_per_unit: r.kcal_per_unit }))
+    const items = rows.filter((r) => !r.dropped && r.qty > 0).map((r) => ({
+      name: r.name, qty: r.qty, kcal_per_unit: r.kcal_per_unit,
+      ...(r.proteinEdited ? { protein_per_unit: r.protein_per_unit } : {}),
+    }))
     const out = await api('/api/commit', { method: 'POST', body: JSON.stringify({ date: p.date, meal, items }) })
     box.querySelector('.acts')?.remove()
     if (out.written) {
       bubble('tools', `logged · ${out.totals.kcal} kcal${meal ? ` · ${meal}` : ''}`)
-      const edits = (out.corrected ?? []).map((c) => `${c.name} is ${c.to} kcal each, not ${c.from}`)
+      const edits = (out.corrected ?? []).map((c) =>
+        `${c.name} is ${c.to} kcal` + (c.protein_to != null ? ` and ${c.protein_to}g protein` : '') + ` per unit, not ${c.from}` + (c.protein_from != null ? `/${c.protein_from}g` : ''))
       history.push({ role: 'user', text: `(I confirmed and logged: ${items.map((i) => `${i.qty} x ${i.name}`).join(', ')}` + (edits.length ? `. Remember: ${edits.join('; ')}` : '') + ')' })
       if (edits.length) bubble('tools', `learned · ${edits.join('; ')}`)
       forget()

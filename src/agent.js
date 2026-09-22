@@ -38,6 +38,9 @@ How to handle a meal the user describes:
    NEVER create a food that is a re-wording or misspelling of one you already
    have - "bread with bbutter" IS "bread with butter". Reuse the stored name.
    save_food will refuse a near duplicate and tell you which food to use.
+   If the user CORRECTS a food's numbers ("raw chicken is 121 kcal and 20g
+   protein per 100g"), call save_food with the SAME name and the new values -
+   that overwrites it. Use exactly the numbers they gave.
 5. Then call log_meal with the names, quantities and the meal - breakfast,
    lunch, dinner or snack. Take it from the words if they say ("for lunch I
    had"); otherwise from the time of day: it is currently ${new Date().getHours()}:00.
