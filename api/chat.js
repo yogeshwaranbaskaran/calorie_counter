@@ -2,6 +2,8 @@ import { runTurn } from '../src/agent.js'
 import { makeTools } from '../src/tools.js'
 import { send, requireUser, readBody } from '../src/http.js'
 import { keyForUser } from '../src/auth.js'
+import { quickParse } from '../src/quicklog.js'
+import { buildProposal, inferMeal } from '../src/tools.js'
 
 export default async function handler(req, res) {
   if (req.method !== 'POST') return send(res, 405, { error: 'POST only' })
@@ -18,6 +20,24 @@ export default async function handler(req, res) {
 
   const { messages = [], date } = await readBody(req)
   const forDate = /^\d{4}-\d{2}-\d{2}$/.test(date ?? '') ? date : undefined
+
+  // Foods you have eaten before, with a clear quantity, need no model at all -
+  // every number is already in your table. The agent still handles anything
+  // new, ambiguous, or phrased as a question. On a congested free tier this is
+  // the difference between instant and half a minute.
+  const said = messages.at(-1)?.role === 'user' ? messages.at(-1).text : null
+  if (said) {
+    const items = await quickParse(who.userId, said)
+    if (items) {
+      const proposal = await buildProposal(who.userId, { items, meal: inferMeal(null, forDate ?? undefined) }, forDate)
+      if (!proposal.error) {
+        return send(res, 200, {
+          reply: '', proposal, calls: ['from your food table'], fast: true,
+          history: [...messages, { role: 'model', text: '', calls: [] }],
+        })
+      }
+    }
+  }
   const history = messages.slice(-40) // keep the context window bounded
 
   // The web confirm gate: log_meal cannot write. It parks a proposal, the loop

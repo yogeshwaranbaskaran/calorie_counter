@@ -40,11 +40,35 @@ function toGemini(messages) {
   })
 }
 
-export async function llm({ system, messages, tools, thinking, apiKey }) {
-  // gemini-3.6-flash is capped at TWENTY requests per DAY on the free tier,
-  // which three meals plus an insights run would exhaust. flash-lite has real
-  // headroom, answers in about a second, and handles this tool loop fine.
-  const model = process.env.GEMINI_MODEL || 'gemini-3.5-flash-lite'
+// A model having a bad day must not hang the app. Each attempt is capped, and
+// a timeout or a 5xx falls through to the next model in the list.
+const TIMEOUT_MS = Number(process.env.LLM_TIMEOUT_MS || 45_000)
+const FALLBACKS = (process.env.GEMINI_FALLBACKS || 'gemini-3.1-flash-lite,gemini-3.5-flash-lite')
+  .split(',').map((m) => m.trim()).filter(Boolean)
+
+export async function llm(opts) {
+  const chain = [undefined, ...FALLBACKS] // undefined = the configured model
+  let last
+  for (let i = 0; i < chain.length; i++) {
+    try {
+      return await llmOnce({ ...opts, attemptModel: chain[i] })
+    } catch (err) {
+      last = err
+      // Only a timeout or an upstream fault is worth trying elsewhere; a bad
+      // key or a bad request will fail identically on every model.
+      const retryable = err.code === 'timeout' || err.code === 'upstream' || err.code === 'rate_limit'
+      if (!retryable || i === chain.length - 1) throw err
+      console.warn(`llm: ${err.code} on ${chain[i] ?? 'primary'}, trying ${chain[i + 1]}`)
+    }
+  }
+  throw last
+}
+
+async function llmOnce({ system, messages, tools, thinking, apiKey, attemptModel }) {
+  // Measured 2026-09-23: flash-lite went erratic (14s, 47s, 62s for the same
+  // call) while plain flash was a steady 6.4s. gemini-3.6-flash is out - it is
+  // capped at twenty requests a DAY on the free tier.
+  const model = attemptModel || process.env.GEMINI_MODEL || 'gemini-3.5-flash'
   // A user on the free plan supplies their own key; the hosted plan falls back
   // to the owner's.
   const key = apiKey || process.env.GEMINI_API_KEY
@@ -59,24 +83,34 @@ export async function llm({ system, messages, tools, thinking, apiKey }) {
     systemInstruction: { parts: [{ text: system }] },
   }
   if (tools?.length) body.tools = [{ functionDeclarations: tools }]
-  // Logging a meal is recall and bookkeeping, not hard reasoning, and every
-  // turn costs the user real seconds. `low` roughly halves the latency.
-  // Measured: thinkingBudget:0 is rejected outright by 3.6; thinkingLevel is
-  // the parameter that works.
-  if (thinking) body.generationConfig = { thinkingConfig: { thinkingLevel: thinking } }
+  // thinkingLevel is OFF by default. It halved latency when it was added in
+  // September; measured again 2026-09-23 it MULTIPLIED it - the same call took
+  // 6.4s without and 37.8s with. Set GEMINI_THINKING=low to put it back, and
+  // measure before trusting it.
+  if (thinking && process.env.GEMINI_THINKING) {
+    body.generationConfig = { thinkingConfig: { thinkingLevel: process.env.GEMINI_THINKING } }
+  }
 
-  const res = await fetch(`${ENDPOINT}/${model}:generateContent?key=${key}`, {
-    method: 'POST',
-    headers: { 'content-type': 'application/json' },
-    body: JSON.stringify(body),
-  })
+  let res
+  try {
+    res = await fetch(`${ENDPOINT}/${model}:generateContent?key=${key}`, {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify(body),
+      signal: AbortSignal.timeout(TIMEOUT_MS),
+    })
+  } catch (err) {
+    const e = new Error(`${model} did not answer within ${TIMEOUT_MS / 1000}s`)
+    e.code = err.name === 'TimeoutError' || err.name === 'AbortError' ? 'timeout' : 'upstream'
+    throw e
+  }
 
   if (!res.ok) {
     const detail = await res.text()
     // Typed so the UI can say something useful instead of dumping Google's
     // JSON at you. The free tier is only a few requests per minute, so 429 is
     // an everyday event, not an exception.
-    const err = new Error(`LLM ${res.status}: ${detail.slice(0, 300)}`)
+    const err = new Error(`LLM ${res.status} (${model}): ${detail.slice(0, 300)}`)
     err.code =
       res.status === 429 ? 'rate_limit'
       : res.status === 400 && /API key/i.test(detail) ? 'bad_key'
