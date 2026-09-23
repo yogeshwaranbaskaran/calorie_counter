@@ -647,19 +647,29 @@ async function send() {
   view.querySelector('.intro')?.remove()
   bubble('msg me', text)
   history.push({ role: 'user', text })
-  const thinking = bubble('tools', '…')
+  // A silent dot for thirty seconds reads as broken. Count up, and name what
+  // is actually being waited on once it is clearly the model and not us.
+  const thinking = bubble('tools', 'thinking… 0s')
+  let secs = 0
+  const tick = setInterval(() => {
+    secs++
+    thinking.textContent = secs < 6 ? `thinking… ${secs}s`
+      : secs < 20 ? `asking Gemini… ${secs}s`
+      : `Gemini is slow right now… ${secs}s`
+  }, 1000)
+  const stop = () => { clearInterval(tick); thinking.remove(); chat.splice(chat.indexOf(thinking), 1) }
   try {
     const res = await fetch('/api/chat', { method: 'POST', headers: headers(), body: JSON.stringify({ messages: history, date: logDate }) })
     if (res.status === 401) return gate('wrong passcode')
     const out = await res.json()
-    thinking.remove(); chat.splice(chat.indexOf(thinking), 1)
+    stop()
     if (out.history) history = out.history
     if (out.needsKey) { bubble('err', out.error); return planScreen(me.user, out.error) }
     if (out.error) { bubble('err', out.error); if (out.proposal) proposalCard(out.proposal); return }
-    if (out.calls?.length) bubble('tools', out.calls.join(' → '))
+    if (out.calls?.length) bubble('tools', out.fast ? 'from your food table · instant' : out.calls.join(' → '))
     if (out.reply) bubble('msg bot', out.reply)
     if (out.proposal) proposalCard(out.proposal)
-  } catch { thinking.remove(); chat.splice(chat.indexOf(thinking), 1); bubble('err', 'network problem') }
+  } catch { stop(); bubble('err', 'network problem') }
 }
 
 /* =============================================================== trends */
