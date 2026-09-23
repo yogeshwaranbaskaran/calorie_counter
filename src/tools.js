@@ -119,10 +119,20 @@ function editDistance(a, b) {
 // Single digits are ignored because they turn up inside typos ("icecre3am").
 const bigNumbers = (s) => (String(s).match(/\d{2,}/g) ?? []).sort().join(',')
 
+// Edit distance is word-ORDER sensitive, so "boiled eggs" and "egg boiled"
+// scored 0.18 and the duplicate guard would have let a second copy through.
+// The same words in any order, singular or plural, are the same food.
+const FILLER = new Set(['of', 'with', 'a', 'an', 'the'])
+const singular = (w) => (w.length > 3 && w.endsWith('s') && !w.endsWith('ss') ? w.slice(0, -1) : w)
+const wordSet = (t) =>
+  String(t).toLowerCase().replace(/[^a-z0-9 ]/g, ' ').split(/\s+/)
+    .filter((w) => w && !FILLER.has(w)).map(singular).sort().join(' ')
+
 export const similarity = (a, b) => {
   const x = squash(a), y = squash(b)
   if (!x || !y) return 0
   if (bigNumbers(x) !== bigNumbers(y)) return 0
+  if (wordSet(a) === wordSet(b)) return 1
   return 1 - editDistance(x, y) / Math.max(x.length, y.length)
 }
 

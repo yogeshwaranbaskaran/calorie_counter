@@ -16,6 +16,16 @@ const NOISE = /\b(of|some|a bowl of|a cup of|a glass of|a plate of)\b/g
 
 const isWeightFood = (f) => ['g', 'ml'].includes(String(f.unit).toLowerCase())
 
+// Edit distance is word-ORDER sensitive: "boiled eggs" vs "egg boiled" scores
+// 0.18, so the fast path missed the way people actually talk. Canonicalising
+// to a sorted set of singular words makes order and plurals irrelevant, while
+// still demanding the SAME words - "chicken" never matches "chicken curry".
+const FILLER = new Set(['of', 'with', 'a', 'an', 'the'])
+const singular = (w) => (w.length > 3 && w.endsWith('s') && !w.endsWith('ss') ? w.slice(0, -1) : w)
+const canon = (name) =>
+  String(name).toLowerCase().replace(/[^a-z0-9 ]/g, ' ').split(/\s+/)
+    .filter((w) => w && !FILLER.has(w)).map(singular).sort().join(' ')
+
 // Split on commas, "and", "+", and newlines - the way people actually list food.
 // NOT on "with": half the table is "bread with butter", "chapathi with oil",
 // "milk with sugar". Splitting there would tear food names in half.
@@ -44,7 +54,13 @@ function resolve(piece, foods, names) {
   const key = normalize(s)
   let food = foods[key]
   if (!food) {
-    // Only a near-exact match; anything looser is the agent's job.
+    // Same words, any order: "boiled eggs" finds "egg boiled".
+    const c = canon(key)
+    const byWords = names.filter((n) => canon(n) === c)
+    if (byWords.length === 1) food = foods[byWords[0]]
+  }
+  if (!food) {
+    // Then a near-exact spelling match; anything looser is the agent's job.
     const best = names.map((n) => ({ n, score: similarity(key, n) })).sort((a, b) => b.score - a.score)[0]
     if (!best || best.score < 0.9) return null
     food = foods[best.n]
