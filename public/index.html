@@ -8,6 +8,7 @@
 <link rel="manifest" href="/manifest.json">
 <link rel="icon" href="/icon.svg" type="image/svg+xml">
 <title>Calorie Counter</title>
+<meta name="build" content="71b96aa">
 <style>
 :root{
   --bg:#0b0d10; --surface:#14171c; --raised:#1b1f26; --line:#242931; --line2:#2e343d;
@@ -855,10 +856,18 @@ async function settingsScreen() {
     <h3 style="margin-top:8px">body</h3>
     <div class="grid2">${f('goal_kg', 'goal weight (kg)', '75')}${f('height_cm', 'height (cm)', '183')}</div>
     <div class="acts"><button class="b" id="back">back</button><button class="b go" id="save">save</button></div>
+    <p class="hint" style="margin-top:12px">build <code>${document.querySelector('meta[name=build]')?.content ?? '?'}</code> · <a href="#" id="hardreload" style="color:var(--muted)">force refresh</a></p>
     ${me?.signedIn ? `<div class="acts"><button class="b" id="plan">AI plan & key</button><a class="b" href="/api/auth/logout" style="text-align:center;text-decoration:none">sign out</a></div>` : ''}`)
   view.appendChild(box)
   const leave = () => { $('bar').hidden = false; render() }
   box.querySelector('#back').onclick = leave
+  // Last resort if a stale worker or cache is ever serving an old build.
+  box.querySelector('#hardreload')?.addEventListener('click', async (e) => {
+    e.preventDefault()
+    if ('serviceWorker' in navigator) for (const r of await navigator.serviceWorker.getRegistrations()) await r.unregister()
+    if (window.caches) for (const k of await caches.keys()) await caches.delete(k)
+    location.reload()
+  })
   box.querySelector('#plan')?.addEventListener('click', () => planScreen(me.user))
   box.querySelector('#save').onclick = async () => {
     const body = {}
