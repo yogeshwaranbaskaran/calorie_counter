@@ -191,6 +191,51 @@ export async function appendLog(userId, entries) {
   }
 }
 
+// Edit ONE logged entry, for that day only. Deliberately does not touch the
+// foods table: correcting a food says "this is what a mikan is" and applies
+// forever; this says "I had less of it that day".
+//
+// Both edits are plain ratio scaling, so they behave the same whether or not
+// the food still exists: a new qty rescales everything, then a new kcal
+// rescales the macros again.
+export async function updateEntry(userId, id, { qty, kcal }) {
+  const rows = await getLog(userId)
+  const row = rows.find((r) => String(r.id) === String(id))
+  if (!row) return null
+
+  const next = { ...row }
+  const r1 = (n) => Math.round(n * 10) / 10
+  const scale = (f) => {
+    next.grams = row.grams == null ? null : r1(row.grams * f)
+    next.kcal = Math.round(row.kcal * f)
+    for (const k of ['protein_g', 'carbs_g', 'fat_g', 'sugar_g']) next[k] = r1((row[k] ?? 0) * f)
+  }
+
+  if (Number.isFinite(qty) && qty > 0 && qty !== Number(row.qty)) {
+    next.qty = qty
+    scale(qty / Number(row.qty || qty))
+  }
+  if (Number.isFinite(kcal) && kcal >= 0 && Math.round(kcal) !== Math.round(next.kcal)) {
+    const f = next.kcal ? kcal / next.kcal : 1
+    for (const k of ['protein_g', 'carbs_g', 'fat_g', 'sugar_g']) next[k] = r1((next[k] ?? 0) * f)
+    next.kcal = Math.round(kcal)
+  }
+
+  if (!remote) {
+    const all = await readJson('log.json', [])
+    const i = all.findIndex((r) => String(r.id) === String(id))
+    if (i < 0) return null
+    all[i] = { ...all[i], ...next }
+    await writeJson('log.json', all)
+    return next
+  }
+  await q(
+    `update log_entries set qty=$3, grams=$4, kcal=$5, protein_g=$6, carbs_g=$7, fat_g=$8, sugar_g=$9
+     where id=$1 and user_id is not distinct from $2`,
+    [id, userId, next.qty, next.grams, next.kcal, next.protein_g, next.carbs_g, next.fat_g, next.sugar_g])
+  return next
+}
+
 export async function deleteEntry(userId, id) {
   if (!remote) {
     const log = await readJson('log.json', [])
