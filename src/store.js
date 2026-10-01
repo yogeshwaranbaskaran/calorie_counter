@@ -14,6 +14,8 @@ const remote = Boolean(DB_URL)
 // "2 Dosa " and "dosa" must land on the same row.
 export const normalize = (name) => name.trim().toLowerCase().replace(/\s+/g, ' ')
 
+export const MEALS = ['breakfast', 'lunch', 'dinner', 'snack']
+
 // toISOString() is UTC, which in JST dates anything before 09:00 to yesterday.
 // A food log is entirely calendar-day-bound, so that bug would be constant.
 export function localDate(d = new Date()) {
@@ -198,7 +200,7 @@ export async function appendLog(userId, entries) {
 // Both edits are plain ratio scaling, so they behave the same whether or not
 // the food still exists: a new qty rescales everything, then a new kcal
 // rescales the macros again.
-export async function updateEntry(userId, id, { qty, kcal }) {
+export async function updateEntry(userId, id, { qty, kcal, meal, date }) {
   const rows = await getLog(userId)
   const row = rows.find((r) => String(r.id) === String(id))
   if (!row) return null
@@ -221,6 +223,10 @@ export async function updateEntry(userId, id, { qty, kcal }) {
     next.kcal = Math.round(kcal)
   }
 
+  // Meal and date carry no nutrition, so they are set rather than scaled.
+  if (MEALS.includes(meal)) next.meal = meal
+  if (/^\d{4}-\d{2}-\d{2}$/.test(date ?? '')) next.date = date
+
   if (!remote) {
     const all = await readJson('log.json', [])
     const i = all.findIndex((r) => String(r.id) === String(id))
@@ -230,10 +236,28 @@ export async function updateEntry(userId, id, { qty, kcal }) {
     return next
   }
   await q(
-    `update log_entries set qty=$3, grams=$4, kcal=$5, protein_g=$6, carbs_g=$7, fat_g=$8, sugar_g=$9
+    `update log_entries set qty=$3, grams=$4, kcal=$5, protein_g=$6, carbs_g=$7, fat_g=$8, sugar_g=$9,
+       meal=$10, date=$11
      where id=$1 and user_id is not distinct from $2`,
-    [id, userId, next.qty, next.grams, next.kcal, next.protein_g, next.carbs_g, next.fat_g, next.sugar_g])
+    [id, userId, next.qty, next.grams, next.kcal, next.protein_g, next.carbs_g, next.fat_g, next.sugar_g,
+     next.meal ?? null, next.date])
   return next
+}
+
+// Move a whole day. Logging after midnight dates the write to the new day, so
+// a late write-up of yesterday lands wholesale on the wrong date.
+export async function moveDay(userId, from, to) {
+  if (!remote) {
+    const all = await readJson('log.json', [])
+    let n = 0
+    for (const r of all) if (r.date === from) { r.date = to; n++ }
+    await writeJson('log.json', all)
+    return n
+  }
+  const rows = await q(
+    'update log_entries set date=$3 where user_id is not distinct from $1 and date=$2 returning id',
+    [userId, from, to])
+  return rows.length
 }
 
 export async function deleteEntry(userId, id) {
