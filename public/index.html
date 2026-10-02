@@ -795,15 +795,22 @@ async function viewBody() {
   view.innerHTML = ''
 
   // weigh-in first: it is the thing you do every morning
-  const form = el('card hero', `<h3>weigh in<span class="r">${prettyDate(isoToday())}</span></h3>
+  const form = el('card hero', `<h3>weigh in</h3>
     <div class="wform"><input id="wkg" type="number" inputmode="decimal" step="0.05" min="20" max="400"
       placeholder="${b.latest ? b.latest.kg : 'kg'}"><button class="b go" id="wsave">save</button></div>
+    <div class="wform" style="margin-top:8px">
+      <input id="wdate" type="date" value="${isoToday()}" max="${isoToday()}"
+             style="flex:1;font-size:14px;text-align:left;padding:9px 12px;color-scheme:dark">
+    </div>
     <p class="hint" style="margin-top:10px">Morning, after the toilet, before food. Same scale, same spot. Then watch the 7-day line, not the daily dot.</p>`)
   form.querySelector('#wsave').onclick = async () => {
     const kg = parseFloat(form.querySelector('#wkg').value)
     if (!Number.isFinite(kg)) return
     form.querySelector('#wsave').disabled = true
-    const out = await api('/api/weight', { method: 'POST', body: JSON.stringify({ kg, date: isoToday() }) })
+    // The date defaults to today but is editable, so a missed morning can be
+    // filled in without logging it wrong and fixing it afterwards.
+    const on = form.querySelector('#wdate').value || isoToday()
+    const out = await api('/api/weight', { method: 'POST', body: JSON.stringify({ kg, date: on }) })
     if (out.ok) { cache.body = null; viewBody() } else { form.querySelector('#wsave').disabled = false; alert(out.error) }
   }
   form.querySelector('#wkg').addEventListener('keydown', (e) => { if (e.key === 'Enter') form.querySelector('#wsave').click() })
