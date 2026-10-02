@@ -305,6 +305,22 @@ export async function putWeight(userId, date, kg) {
   if (!upd.length) await q('insert into weights (user_id, date, kg) values ($1,$2,$3)', [userId, date, kg])
 }
 
+// Change a reading's date or value. Identified by its date, because that is
+// the key - one weigh-in per day. Moving onto a day that already has one
+// replaces it, same as weighing twice in a morning does.
+export async function updateWeight(userId, fromDate, { date, kg }) {
+  const all = await getWeights(userId)
+  const row = all.find((w) => w.date === fromDate)
+  if (!row) return null
+  const to = /^\d{4}-\d{2}-\d{2}$/.test(date ?? '') ? date : fromDate
+  // Two decimals: the scale reads 77.85 and rounding that to 77.9 throws away
+  // precision the trend line can actually use.
+  const value = Number.isFinite(kg) && kg >= 20 && kg <= 400 ? Math.round(kg * 100) / 100 : row.kg
+  if (to !== fromDate) await deleteWeight(userId, fromDate)
+  await putWeight(userId, to, value)
+  return { date: to, kg: value }
+}
+
 export async function deleteWeight(userId, date) {
   if (!remote) {
     const all = await readJson('weights.json', [])

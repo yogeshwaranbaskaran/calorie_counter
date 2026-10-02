@@ -796,7 +796,7 @@ async function viewBody() {
 
   // weigh-in first: it is the thing you do every morning
   const form = el('card hero', `<h3>weigh in<span class="r">${prettyDate(isoToday())}</span></h3>
-    <div class="wform"><input id="wkg" type="number" inputmode="decimal" step="0.1" min="20" max="400"
+    <div class="wform"><input id="wkg" type="number" inputmode="decimal" step="0.05" min="20" max="400"
       placeholder="${b.latest ? b.latest.kg : 'kg'}"><button class="b go" id="wsave">save</button></div>
     <p class="hint" style="margin-top:10px">Morning, after the toilet, before food. Same scale, same spot. Then watch the 7-day line, not the daily dot.</p>`)
   form.querySelector('#wsave').onclick = async () => {
@@ -836,13 +836,34 @@ async function viewBody() {
        <p class="hint" style="margin-top:8px">To lose ~0.5 kg/week, target about <b style="color:var(--text)">${m.kcal - 500}</b>.</p>`
     : `<p class="hint">Needs about a week of weights alongside your food log. Then this becomes the one number the app was guessing at.</p>`)))
 
-  const list = el('card', `<h3>readings</h3>` + [...b.series].reverse().slice(0, 14).map((s) =>
-    `<div class="ent" data-date="${s.date}" style="padding-left:0"><span class="n">${prettyDate(s.date)}</span><span class="k">${s.kg} kg</span><button class="x" title="remove">×</button></div>`).join(''))
-  list.querySelectorAll('.ent').forEach((row) => (row.querySelector('.x').onclick = async () => {
-    row.style.opacity = .4
-    const out = await api(`/api/weight?date=${row.dataset.date}`, { method: 'DELETE' })
-    if (out.deleted) { cache.body = null; viewBody() } else row.style.opacity = 1
-  }))
+  const list = el('card', `<h3>readings<span class="r">tap to edit</span></h3>` + [...b.series].reverse().slice(0, 14).map((s) =>
+    `<div class="ent" data-date="${s.date}" data-kg="${s.kg}" style="padding-left:0"><span class="n">${prettyDate(s.date)}</span><span class="k">${s.kg} kg</span><button class="x" title="remove">×</button></div>`).join(''))
+  list.querySelectorAll('.ent').forEach((row) => {
+    row.querySelector('.x').onclick = async () => {
+      row.style.opacity = .4
+      const out = await api(`/api/weight?date=${row.dataset.date}`, { method: 'DELETE' })
+      if (out.deleted) { cache.body = null; viewBody() } else row.style.opacity = 1
+    }
+    // Same reason the food entries are editable: a weigh-in written up after
+    // midnight lands on the wrong day, and that must not need a database.
+    row.querySelector('.n').onclick = () => {
+      if (row.nextElementSibling?.classList.contains('ed')) return row.nextElementSibling.remove()
+      const ed = el('ed', `
+        <input class="wkg" type="number" inputmode="decimal" step="0.05" min="20" max="400" value="${row.dataset.kg}">
+        <span>kg</span>
+        <input class="wdt" type="date" value="${row.dataset.date}" max="${isoToday()}">
+        <button class="cancel">cancel</button><button class="go save">save</button>`)
+      row.after(ed)
+      ed.querySelector('.cancel').onclick = () => ed.remove()
+      ed.querySelector('.save').onclick = async () => {
+        ed.querySelectorAll('button').forEach((x) => (x.disabled = true))
+        const out = await api('/api/weight', { method: 'PATCH', body: JSON.stringify({
+          from: row.dataset.date, date: ed.querySelector('.wdt').value, kg: parseFloat(ed.querySelector('.wkg').value) }) })
+        if (out.updated) { cache.body = null; viewBody() } else ed.querySelectorAll('button').forEach((x) => (x.disabled = false))
+      }
+      ed.querySelector('.wkg').focus()
+    }
+  })
   view.appendChild(list)
 }
 

@@ -2,7 +2,7 @@ import { getWeights, getLog, getTargets, localDate } from '../src/store.js'
 import { send, requireUser } from '../src/http.js'
 import { shiftDate } from './range.js'
 
-const round1 = (n) => Math.round(n * 10) / 10
+const round1 = (n) => Math.round(n * 100) / 100
 
 // Energy in a kilo of bodyweight change, fat and lean mixed. The standard
 // working figure; the true number varies by person, which is why the estimate
