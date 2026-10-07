@@ -71,7 +71,7 @@ export default async function handler(req, res) {
     const user = await currentUser(req)
     if (!user) return send(res, 401, { error: 'not signed in' })
 
-    const { plan, gemini_key } = await readBody(req)
+    const { plan, gemini_key, skip_check } = await readBody(req)
     if (!['byok', 'hosted'].includes(plan)) return send(res, 400, { error: 'unknown plan' })
 
     if (plan === 'byok') {
@@ -82,7 +82,10 @@ export default async function handler(req, res) {
       }
       // Only a newly pasted key is checked. A blank field means "keep the one
       // you already have", which was verified when it was first saved.
-      if (key) {
+      // skip_check is the user's own decision, offered only after the check
+      // failed to reach a verdict. Google being unreachable must not be able
+      // to lock somebody out of their own app.
+      if (key && !skip_check) {
         const check = await verifyKey(key)
         if (!check.ok) return send(res, 400, { error: check.reason, retry: Boolean(check.retry) })
       }

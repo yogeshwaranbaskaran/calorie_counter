@@ -1186,16 +1186,16 @@ function planScreen(user, note) {
   // The server asks Gemini a one-word question with this key before saving it,
   // so say that is what is happening rather than freezing the button.
   const TICK = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg>'
-  const save = async (plan, key, btn) => {
+  const save = async (plan, key, btn, skipCheck = false) => {
     const label = btn.textContent
     btn.disabled = true
-    btn.textContent = key ? 'checking your key…' : 'saving…'
+    btn.textContent = !key || skipCheck ? 'saving…' : 'checking your key…'
     const slot = document.getElementById('keyerr')
     if (slot) slot.innerHTML = '' // last attempt's complaint is not about this one
     let out
     try {
       const r = await fetch('/api/auth/plan', { method: 'POST', headers: { 'content-type': 'application/json' },
-        body: JSON.stringify({ plan, gemini_key: key }) })
+        body: JSON.stringify({ plan, gemini_key: key, skip_check: skipCheck }) })
       out = await r.json()
     } catch { out = { error: 'Could not reach the server. Try again.' } }
     if (out.ok) {
@@ -1206,12 +1206,19 @@ function planScreen(user, note) {
       btn.textContent = 'Start tracking'
       btn.onclick = () => (location.href = '/')
       const ok = document.getElementById('keyok')
-      if (ok) ok.innerHTML = `<p class="okline">${TICK}${key ? 'Gemini is connected' : 'Key saved'}</p>`
+      // Never claim a connection that was never tested.
+      if (ok) ok.innerHTML = `<p class="okline">${TICK}${!key || skipCheck ? 'Key saved' : 'Gemini is connected'}</p>`
       return
     }
     btn.disabled = false
     btn.textContent = label
-    if (slot) slot.innerHTML = `<p class="err">${esc(out.error)}</p>`
+    if (slot) {
+      // A verdict about the key is final. Failing to reach a verdict is not,
+      // so offer the way past it rather than leaving someone stuck.
+      slot.innerHTML = `<p class="err">${esc(out.error)}</p>` + (out.retry
+        ? `<button class="skip" id="anyway" style="padding-left:0">Save it without checking</button>` : '')
+      slot.querySelector('#anyway')?.addEventListener('click', () => save(plan, key, btn, true))
+    }
     else planScreen(user, out.error)
   }
   const steps = [

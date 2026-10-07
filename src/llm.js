@@ -142,17 +142,26 @@ async function llmOnce({ system, messages, tools, thinking, apiKey, attemptModel
 export async function verifyKey(apiKey) {
   const key = String(apiKey ?? '').trim()
   if (!key) return { ok: false, reason: 'Paste a key first.' }
-  // Google answers 503 often enough that one blip would otherwise tell someone
-  // their perfectly good key is broken. A verdict ABOUT the key is final; a
-  // failure to reach an opinion is worth one more go.
-  const first = await probeKey(key)
-  if (!first.retry) return first
-  return probeKey(key)
+  // Try the model the app will actually use first, then the fallbacks. A key
+  // whose project cannot see one particular model is still a working key, and
+  // verifying against a model the app never calls proves nothing.
+  //
+  // Google answers 5xx often enough that one blip would otherwise tell someone
+  // their perfectly good key is broken, so a verdict ABOUT the key is final and
+  // returned at once, while a failure to reach an opinion moves on and is only
+  // reported if nothing else works.
+  const models = [process.env.GEMINI_MODEL || 'gemini-3.5-flash', ...FALLBACKS]
+  let last = { ok: false, retry: true, reason: 'Could not reach Google just now.' }
+  for (const model of [...new Set(models)]) {
+    const r = await probeKey(key, model)
+    if (r.ok || !r.retry) return r
+    last = r
+  }
+  return last
 }
 
-async function probeKey(key) {
+async function probeKey(key, model) {
 
-  const model = (process.env.GEMINI_FALLBACKS || 'gemini-3.1-flash-lite').split(',')[0].trim()
   let res
   try {
     res = await fetch(`${ENDPOINT}/${model}:generateContent?key=${encodeURIComponent(key)}`, {
@@ -168,8 +177,9 @@ async function probeKey(key) {
       }),
       signal: AbortSignal.timeout(Number(process.env.VERIFY_TIMEOUT_MS || 12_000)),
     })
-  } catch {
-    return { ok: false, retry: true, reason: 'Could not reach Google just now. Try again.' }
+  } catch (err) {
+    console.error('verifyKey', model, 'unreachable', err?.name ?? err)
+    return { ok: false, retry: true, reason: 'Could not reach Google just now.' }
   }
 
   // A throttled key is a working key. Google only rate limits once it has
@@ -178,15 +188,21 @@ async function probeKey(key) {
   if (res.ok) return { ok: true }
 
   const detail = (await res.text()).slice(0, 400)
+  // Every failure, not just the surprising ones. The 5xx branch used to return
+  // silently, so a user stuck on "Google is having trouble" left nothing behind
+  // in the logs to work from.
+  console.error('verifyKey', model, res.status, detail.replace(/\s+/g, ' ').slice(0, 220))
+
   if (res.status === 400 && /API.?key.?not.?valid|API_KEY_INVALID/i.test(detail)) {
     return { ok: false, reason: 'Google does not recognise that key. Check you copied all of it.' }
   }
   if (res.status === 403 || /SERVICE_DISABLED|PERMISSION_DENIED/i.test(detail)) {
     return { ok: false, reason: 'That key exists but is not allowed to use Gemini. Create a new one in AI Studio.' }
   }
-  if (res.status >= 500) return { ok: false, retry: true, reason: 'Google is having trouble. Try again in a moment.' }
+  // Not this model, but perhaps another: let the caller try the next one.
+  if (res.status === 404) return { ok: false, retry: true, reason: `Gemini has no ${model} for this key.` }
+  if (res.status >= 500) return { ok: false, retry: true, reason: `Google is having trouble (${res.status}).` }
   // Anything else is more likely our request than their key, so do not accuse
   // the user of mistyping something they may have pasted correctly.
-  console.error('verifyKey unexpected', res.status, detail)
-  return { ok: false, retry: true, reason: 'Could not check the key just now. Try again.' }
+  return { ok: false, retry: true, reason: `Could not check the key just now (${res.status}).` }
 }
