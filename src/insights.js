@@ -26,7 +26,7 @@ export async function getInsights(range, apiKey) {
   const rows = range.days.map((d) =>
     `${d.date}: ${d.kcal} kcal, ${d.protein_g}g protein, ${d.carbs_g}g carbs, ` +
     `${d.fat_g}g fat, ${d.sugar_g}g sugar` +
-    (d.items.length ? ` — ${d.items.map((i) => `${i.qty}x ${i.name}`).join(', ')}` : ' — nothing logged')
+    (d.items.length ? `: ${d.items.map((i) => `${i.qty}x ${i.name}`).join(', ')}` : ': nothing logged')
   ).join('\n')
 
   const summary =

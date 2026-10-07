@@ -872,7 +872,7 @@ async function viewBody() {
     return view.appendChild(el('card', `<h3>trend</h3><p class="hint">Log your first weight above. After a week the trend appears; after three the agent measures your real maintenance calories from it.</p>`))
   }
 
-  const dir = (v) => v == null ? '—' : `${v > 0 ? '+' : ''}${v} kg`
+  const dir = (v) => v == null ? '·' : `${v > 0 ? '+' : ''}${v} kg`
   const cls = (v) => v == null ? '' : v < 0 ? 'down' : v > 0 ? 'up' : ''
   view.appendChild(el('card', `<h3>weight<span class="r">7-day average</span></h3>
     <div class="stat3">
@@ -884,7 +884,7 @@ async function viewBody() {
     ${weightChart(b.series, b.goal_kg)}
     ${b.projection ? `<p class="hint" style="margin-top:10px">${b.projection.stalled
       ? `At the current rate (${b.projection.rate_per_week} kg/week) you are not moving toward ${b.goal_kg} kg.`
-      : `At ${b.projection.rate_per_week} kg/week you reach <b style="color:var(--text)">${b.goal_kg} kg around ${shortDate(b.projection.date)}</b> — ${b.projection.days} days.`}</p>`
+      : `At ${b.projection.rate_per_week} kg/week you reach <b style="color:var(--text)">${b.goal_kg} kg around ${shortDate(b.projection.date)}</b>, ${b.projection.days} days away.`}</p>`
       : b.goal_kg ? '' : `<p class="hint" style="margin-top:10px">Set a goal weight in settings to see a projection.</p>`}`))
 
   const m = b.maintenance
@@ -892,9 +892,9 @@ async function viewBody() {
     ? `<div class="bignum"><b>${m.kcal}</b><span>kcal a day, in your logged units</span></div>
        <p class="hint">Over ${m.over_days} days you logged <b style="color:var(--text)">${m.avg_intake}</b> kcal/day and your weight trend ran at
        <b style="color:var(--text)">${m.kg_per_week} kg/week</b> across ${m.readings} readings. Holding steady would take about
-       <b style="color:var(--text)">${m.kcal}</b>. No formula — your own data.</p>
+       <b style="color:var(--text)">${m.kcal}</b>. No formula, your own data.</p>
        ${m.fit < 0.3 ? '<p class="hint" style="margin-top:8px">The readings scatter more than they trend, so this is guesswork so far. More mornings will settle it.</p>'
-         : m.confidence !== 'good' ? '<p class="hint" style="margin-top:8px">Under three weeks, water movement still inflates the trend — a new diet drops water fast, which reads as fat loss. Expect this number to fall as the weeks add up.</p>' : ''}
+         : m.confidence !== 'good' ? '<p class="hint" style="margin-top:8px">Under three weeks, water movement still inflates the trend. A new diet drops water fast, which reads as fat loss. Expect this number to fall as the weeks add up.</p>' : ''}
        <p class="hint" style="margin-top:8px">To lose ~0.5 kg/week, target about <b style="color:var(--text)">${m.kcal - 500}</b>.</p>`
     : `<p class="hint">Needs about ten days of weights alongside your food log. Then this becomes the one number the agent was guessing at.</p>`)))
 
