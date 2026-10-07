@@ -12,6 +12,9 @@ export default async function handler(req, res) {
     if (store === 'postgres') await getLog(null, '1970-01-01', '1970-01-01')
     return send(res, 200, { ok: true, store })
   } catch (err) {
-    return send(res, 503, { ok: false, store, error: String(err.message ?? err).slice(0, 120) })
+    // A socket error often carries an empty message and all the meaning in
+    // .code - reporting "" tells nobody anything.
+    const why = [err.code, err.message].filter(Boolean).join(': ') || String(err)
+    return send(res, 503, { ok: false, store, error: why.slice(0, 160) })
   }
 }
