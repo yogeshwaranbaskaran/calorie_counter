@@ -1275,7 +1275,14 @@ function planScreen(user, note) {
       btn.textContent = 'Start tracking'
       // The server tells us whether the key reads back. If it does not, going
       // to the app would bounce straight back here with no explanation.
-      btn.onclick = () => (location.href = out.hasKey === false ? '/?key=unreadable' : '/')
+      // location.href = '/' is a navigation, and a navigation may be answered
+      // from cache: when the current URL is already '/', the browser can hand
+      // back the very page it has, including an index.html cached before this
+      // app started sending no-store. That is why a manual refresh worked and
+      // this button did not, and why signing up with a different account on
+      // the same browser changed nothing. reload() revalidates, exactly as the
+      // refresh key does.
+      btn.onclick = () => location.reload()
       const ok = document.getElementById('keyok')
       // Never claim a connection that was never tested.
       if (ok) {
@@ -1384,7 +1391,7 @@ function accountButton() {
 
 async function boot() {
   const err = new URLSearchParams(location.search).get('error')
-  if (err) history.replaceState({}, '', '/')
+  if (err) window.history.replaceState({}, '', '/')  // `history` here is the chat transcript
   // The question this answers changes the moment a key is saved, and a
   // navigation (unlike a manual reload) is free to answer it from cache.
   // That is exactly what sent people back to the key page they had just
