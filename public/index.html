@@ -275,10 +275,17 @@ nav button.on{color:var(--accent)}
 
 /* ---------- onboarding wizard ---------- */
 .wiz{min-height:100%; display:flex; flex-direction:column; max-width:520px; margin:0 auto; width:100%;
-  padding:22px 22px calc(22px + env(safe-area-inset-bottom))}
-.dots{display:flex; gap:6px; margin-bottom:26px; flex:0 0 auto}
-.dots i{height:3px; flex:1; border-radius:2px; background:var(--line); transition:background .3s}
-.dots i.on{background:var(--accent)}
+  padding:22px 22px calc(22px + env(safe-area-inset-bottom)); position:relative; isolation:isolate}
+/* Ambient light behind the hero. Fixed, so it stays put while panes slide. */
+.glow{position:fixed; inset:-180px 0 auto 0; height:520px; z-index:-1; pointer-events:none;
+  background:radial-gradient(60% 55% at 50% 30%, rgba(125,216,143,.17), rgba(125,216,143,.05) 45%, transparent 72%)}
+.glow::after{content:''; position:absolute; inset:0;
+  background:radial-gradient(40% 40% at 78% 8%, rgba(79,184,100,.10), transparent 70%)}
+.dots{display:flex; gap:6px; margin-bottom:28px; flex:0 0 auto}
+.dots i{height:3px; flex:1; border-radius:2px; background:var(--line); overflow:hidden; position:relative}
+.dots i.on::after{content:''; position:absolute; inset:0; border-radius:2px;
+  background:linear-gradient(90deg,var(--accent),var(--accent2)); animation:fill .42s cubic-bezier(.2,.8,.3,1) both}
+@keyframes fill{from{transform:scaleX(0); transform-origin:left} to{transform:none}}
 .pane{flex:1; display:flex; flex-direction:column; min-height:0}
 .pane.in-next{animation:inNext .34s cubic-bezier(.2,.75,.3,1) both}
 .pane.in-back{animation:inBack .34s cubic-bezier(.2,.75,.3,1) both}
@@ -286,8 +293,18 @@ nav button.on{color:var(--accent)}
 @keyframes inBack{from{opacity:0; transform:translateX(-26px)} to{opacity:1; transform:none}}
 @media (prefers-reduced-motion:reduce){ .pane.in-next,.pane.in-back{animation:none} }
 
-.pane .mark{width:54px; height:54px; border-radius:16px; display:block; margin-bottom:20px}
-.pane h1{font-size:27px; line-height:1.2; letter-spacing:-.02em; font-weight:700; margin-bottom:12px}
+/* Children arrive just behind the pane, so a screen assembles rather than
+   appearing all at once. */
+.pane > *{animation:lift .42s cubic-bezier(.2,.8,.3,1) both}
+.pane > *:nth-child(1){animation-delay:.04s} .pane > *:nth-child(2){animation-delay:.09s}
+.pane > *:nth-child(3){animation-delay:.14s} .pane > *:nth-child(4){animation-delay:.19s}
+.pane > *:nth-child(5){animation-delay:.23s} .pane > *:nth-child(6){animation-delay:.26s}
+@keyframes lift{from{opacity:0; transform:translateY(10px)} to{opacity:1; transform:none}}
+@media (prefers-reduced-motion:reduce){ .pane > *{animation:none} }
+
+.pane .mark{width:58px; height:58px; border-radius:17px; display:block; margin-bottom:22px;
+  box-shadow:0 10px 34px -10px rgba(125,216,143,.45)}
+.pane h1{font-size:31px; line-height:1.14; letter-spacing:-.033em; font-weight:760; margin-bottom:13px}
 .pane h1 em{font-style:normal; color:var(--accent)}
 .pane .lead{color:var(--muted); font-size:15.5px; line-height:1.6; margin:0 0 8px; max-width:38ch}
 .pane .spacer{flex:1; min-height:18px}
@@ -295,15 +312,48 @@ nav button.on{color:var(--accent)}
 .pane .cta .b{width:100%; padding:14px}
 .skip{background:none; border:0; color:var(--faint); font-size:13px; cursor:pointer; padding:8px}
 
-.flow{margin:6px 0 0}
+.flow{margin:6px 0 0; position:relative}
+.flow .ln{position:relative}
+.flow .ln::before{content:''; position:absolute; left:12px; top:36px; bottom:-11px; width:1px;
+  background:linear-gradient(var(--line2), var(--line))}
+.flow .ln:last-of-type::before{display:none}
+
+/* A small picture of the thing itself, which says more than another paragraph */
+.mock{margin:4px 0 0; display:flex; flex-direction:column; gap:10px}
+.mock .say{align-self:flex-end; max-width:82%; padding:10px 14px; border-radius:16px 16px 5px 16px;
+  background:linear-gradient(135deg,var(--accent),var(--accent2)); color:#0b0d10;
+  font-size:14px; font-weight:600; box-shadow:0 8px 24px -10px rgba(125,216,143,.5)}
+.mock .res{background:var(--surface); border:1px solid var(--line); border-radius:16px 16px 16px 5px;
+  padding:13px 15px; align-self:flex-start; width:100%; max-width:94%}
+.mock .it{display:flex; align-items:baseline; gap:9px; padding:5px 0; font-size:14px;
+  font-variant-numeric:tabular-nums}
+.mock .it b{font-weight:500}
+.mock .it span{color:var(--faint); font-size:12.5px}
+.mock .it em{margin-left:auto; font-style:normal; color:var(--muted)}
+.mock .tot{display:flex; margin-top:7px; padding-top:9px; border-top:1px solid var(--line);
+  font-size:14px; font-variant-numeric:tabular-nums}
+.mock .tot em{margin-left:auto; font-style:normal; color:var(--accent); font-weight:700}
 .flow .ln{display:flex; gap:13px; align-items:flex-start; padding:11px 0}
 .flow .n{flex:0 0 auto; width:25px; height:25px; border-radius:8px; background:var(--raised); color:var(--accent);
   font-size:12px; font-weight:700; display:flex; align-items:center; justify-content:center; margin-top:1px}
 .flow .ln p{margin:0; font-size:14.5px; line-height:1.55; color:var(--text)}
 .flow .ln p span{display:block; color:var(--muted); font-size:13.5px; white-space:normal; margin-top:2px}
-.flow .tail{margin:14px 0 0; padding:12px 14px; background:var(--raised); border-radius:var(--r2);
-  font-size:13.5px; color:var(--muted); line-height:1.55}
-.flow .tail b{color:var(--accent)}
+.tail{margin:16px 0 0; padding:13px 15px; border-radius:var(--r2); font-size:13.5px;
+  color:var(--muted); line-height:1.55; background:var(--raised);
+  border-left:2px solid var(--accent)}
+.tail b{color:var(--accent)}
+
+/* What "yours" means, itemised */
+.privbox{background:var(--surface); border:1px solid var(--line); border-radius:var(--r); overflow:hidden}
+.privbox .who{display:flex; align-items:center; gap:10px; padding:13px 15px; border-bottom:1px solid var(--line)}
+.privbox .who i{width:28px; height:28px; border-radius:50%; flex:0 0 auto;
+  background:linear-gradient(135deg,var(--accent),var(--accent2))}
+.privbox .who b{font-size:14px; font-weight:600}
+.privbox .pr{display:flex; align-items:center; gap:10px; padding:11px 15px; font-size:14px;
+  border-top:1px solid var(--line)}
+.privbox .pr:first-of-type{border-top:0}
+.privbox .pr svg{width:14px; height:14px; color:var(--accent); flex:0 0 auto}
+.privbox .pr em{margin-left:auto; font-style:normal; color:var(--faint); font-size:12px}
 .pane code{background:var(--raised); padding:2px 7px; border-radius:5px; font-size:13px; color:var(--text)}
 
 .pane input{width:100%; background:var(--raised); border:1px solid var(--line); color:var(--text);
@@ -1051,7 +1101,7 @@ const screen = (html) => { document.body.innerHTML = `<div class="gate">${html}<
 // A step-at-a-time intro rather than one long scroll. Someone opening an
 // unverified app wants one idea per screen and a way forward, not a brochure.
 function wizard(steps, i = 0, dir = 'next') {
-  document.body.innerHTML = `<div class="wiz">
+  document.body.innerHTML = `<div class="wiz"><div class="glow"></div>
     <div class="dots">${steps.map((_, k) => `<i class="${k <= i ? 'on' : ''}"></i>`).join('')}</div>
     <div class="pane in-${dir}" id="pane">${steps[i].html}</div></div>`
   const pane = document.getElementById('pane')
@@ -1065,9 +1115,15 @@ function signInScreen(error) {
     {
       html: `<img class="mark" src="/icon.svg" alt="">
         <h1>Tell it what you ate.<br>It counts <em>everything</em>.</h1>
-        <p class="lead">Type a meal the way you would say it. No searching a list, no dropdowns.</p>
-        <p class="lead">An agent works out the calories and protein, and remembers your food.</p>
-        <p class="lead">Weigh in daily and it finds the calories you actually burn.</p>
+        <p class="lead">Type a meal the way you would say it. An agent does the rest.</p>
+        <div class="mock">
+          <div class="say">200g rice and 3 boiled eggs</div>
+          <div class="res">
+            <div class="it"><b>rice</b><span>200 g</span><em>260 kcal</em></div>
+            <div class="it"><b>egg boiled</b><span>3 pcs</span><em>234 kcal</em></div>
+            <div class="tot"><b>total</b><em>494 kcal · 25 g protein</em></div>
+          </div>
+        </div>
         <div class="spacer"></div>
         <div class="cta">${nextBtn("Let's get fit")}</div>`,
       wire: (pane, go) => (pane.querySelector('#nx').onclick = () => go(1)),
@@ -1098,10 +1154,14 @@ function signInScreen(error) {
       html: `<h1>Your log stays <em>yours</em></h1>
         <p class="lead">Sign in so your food list, weight and targets belong to your account.
           Nobody else can see them.</p>
-        <p class="lead">The agent learns your portions and your corrections, so that list has to be
-          personal to you.</p>
-        <p class="lead">Google sign-in means no password to invent, and none for this agent to store.
-          It reads your name, email and picture. Nothing else.</p>
+        <div class="privbox">
+          <div class="who"><i></i><b>your account</b></div>
+          <div class="pr"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="10" width="16" height="10" rx="2"/><path d="M8 10V7a4 4 0 0 1 8 0v3"/></svg>your food list<em>only you</em></div>
+          <div class="pr"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="10" width="16" height="10" rx="2"/><path d="M8 10V7a4 4 0 0 1 8 0v3"/></svg>your weight<em>only you</em></div>
+          <div class="pr"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="10" width="16" height="10" rx="2"/><path d="M8 10V7a4 4 0 0 1 8 0v3"/></svg>your targets<em>only you</em></div>
+        </div>
+        <p class="lead" style="margin-top:16px">Google sign-in means no password to invent, and none
+          for this agent to store. It reads your name, email and picture. Nothing else.</p>
         ${error ? `<p class="err" style="margin-top:14px">${esc(error)}</p>` : ''}
         <div class="spacer"></div>
         <div class="cta">
