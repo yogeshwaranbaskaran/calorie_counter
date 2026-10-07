@@ -273,6 +273,32 @@ nav button.on{color:var(--accent)}
 /* ---------------- auth screens ---------------- */
 .gate{margin:auto; padding:26px 22px; max-width:380px; width:100%}
 
+/* ---------- settings sheet ---------- */
+.scrim{position:fixed; inset:0; z-index:60; background:rgba(0,0,0,.55); backdrop-filter:blur(3px);
+  display:flex; align-items:flex-end; justify-content:center; animation:fade .18s ease both}
+@keyframes fade{from{opacity:0} to{opacity:1}}
+.sheet{width:100%; max-width:440px; background:var(--surface); border:1px solid var(--line);
+  border-bottom:0; border-radius:22px 22px 0 0; padding:10px 16px calc(16px + env(safe-area-inset-bottom));
+  animation:up .28s cubic-bezier(.2,.8,.3,1) both}
+@keyframes up{from{transform:translateY(100%)} to{transform:none}}
+.sheet .grab{width:38px; height:4px; border-radius:2px; background:var(--line2); margin:0 auto 14px}
+.sheet h3{font-size:12px; color:var(--faint); letter-spacing:.09em; text-transform:uppercase;
+  margin:0 4px 10px; font-weight:700}
+.srow{display:flex; align-items:center; gap:11px; width:100%; padding:15px 14px; border:0;
+  background:var(--raised); color:var(--text); border-radius:var(--r2); font:inherit; font-size:15px;
+  text-align:left; cursor:pointer; margin-bottom:8px; text-decoration:none}
+.srow:active{background:var(--line)}
+.srow svg{width:17px; height:17px; color:var(--muted); flex:0 0 auto}
+.srow .chev{margin-left:auto; color:var(--faint); width:15px; height:15px}
+.srow.quiet{background:none; justify-content:center; color:var(--muted); margin-bottom:0}
+.sheet .hint{text-align:center; margin:12px 0 4px}
+@media (min-width:520px){
+  .scrim{align-items:center}
+  .sheet{border-radius:22px; border-bottom:1px solid var(--line)}
+  @keyframes up{from{transform:translateY(14px); opacity:0} to{transform:none; opacity:1}}
+}
+@media (prefers-reduced-motion:reduce){ .scrim,.sheet{animation:none} }
+
 /* ---------- onboarding wizard ---------- */
 .wiz{min-height:100%; display:flex; flex-direction:column; max-width:520px; margin:0 auto; width:100%;
   padding:22px 22px calc(22px + env(safe-area-inset-bottom)); position:relative; isolation:isolate}
@@ -1008,7 +1034,63 @@ function paintInsights(out) {
 }
 
 /* ============================================================= settings */
-async function settingsScreen() {
+const CHEV = '<svg class="chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="m9 18 6-6-6-6"/></svg>'
+const SICO = {
+  target: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="5"/><circle cx="12" cy="12" r="1.4" fill="currentColor"/></svg>',
+  key: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="8" cy="15" r="4"/><path d="M11 12l9-9M17 6l2 2M14 9l2 2"/></svg>',
+  out: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4M16 17l5-5-5-5M21 12H9"/></svg>',
+}
+
+// A small sheet, not a screen. Settings is a menu: the one page of real
+// content behind it, targets, gets the whole screen to itself.
+let closeSheet = null
+function settingsSheet() {
+  if (closeSheet) return
+  const scrim = document.createElement('div')
+  scrim.className = 'scrim'
+  scrim.innerHTML = `<div class="sheet" role="dialog" aria-modal="true" aria-label="Settings">
+    <div class="grab"></div>
+    <h3>settings</h3>
+    <button class="srow" id="s_targets">${SICO.target}targets${CHEV}</button>
+    ${me?.signedIn ? `<button class="srow" id="s_plan">${SICO.key}AI plan &amp; key${CHEV}</button>
+    <a class="srow" href="/api/auth/logout">${SICO.out}sign out</a>` : ''}
+    <p class="hint">build <code>${document.querySelector('meta[name=build]')?.content ?? '?'}</code> · <a href="#" id="hardreload" style="color:var(--muted)">force refresh</a></p>
+    <button class="srow quiet" id="s_back">back</button>
+  </div>`
+  document.body.appendChild(scrim)
+
+  // The phone's own back button should close this, not leave the app.
+  window.history.pushState({ sheet: 1 }, '')
+  let popped = false
+  const onPop = () => { popped = true; close() }
+  const onKey = (e) => { if (e.key === 'Escape') close() }
+  const close = (then) => {
+    if (!closeSheet) return
+    closeSheet = null
+    removeEventListener('popstate', onPop)
+    removeEventListener('keydown', onKey)
+    scrim.remove()
+    if (!popped) window.history.back()
+    then?.()
+  }
+  closeSheet = close
+  addEventListener('popstate', onPop)
+  addEventListener('keydown', onKey)
+
+  scrim.onclick = (e) => { if (e.target === scrim) close() }   // tap outside
+  scrim.querySelector('#s_back').onclick = () => close()
+  scrim.querySelector('#s_targets').onclick = () => close(targetsScreen)
+  scrim.querySelector('#s_plan')?.addEventListener('click', () => close(() => planScreen(me.user)))
+  // Last resort if a stale worker or cache is ever serving an old build.
+  scrim.querySelector('#hardreload')?.addEventListener('click', async (e) => {
+    e.preventDefault()
+    if ('serviceWorker' in navigator) for (const r of await navigator.serviceWorker.getRegistrations()) await r.unregister()
+    if (window.caches) for (const k of await caches.keys()) await caches.delete(k)
+    location.reload()
+  })
+}
+
+async function targetsScreen() {
   const t = (await api('/api/targets')).targets || {}
   const f = (k, label, ph) => `<div class="field"><label>${label}</label><input id="t_${k}" type="number" inputmode="decimal" step="any" value="${t[k] ?? ''}" placeholder="${ph}"></div>`
   view.innerHTML = ''
@@ -1020,20 +1102,11 @@ async function settingsScreen() {
     <div class="grid2">${f('target_fiber_g', 'fibre (g)', '30')}</div>
     <h3 style="margin-top:8px">body</h3>
     <div class="grid2">${f('goal_kg', 'goal weight (kg)', '75')}${f('height_cm', 'height (cm)', '183')}</div>
-    <div class="acts"><button class="b" id="back">back</button><button class="b go" id="save">save</button></div>
-    <p class="hint" style="margin-top:12px">build <code>${document.querySelector('meta[name=build]')?.content ?? '?'}</code> · <a href="#" id="hardreload" style="color:var(--muted)">force refresh</a></p>
-    ${me?.signedIn ? `<div class="acts"><button class="b" id="plan">AI plan & key</button><a class="b" href="/api/auth/logout" style="text-align:center;text-decoration:none">sign out</a></div>` : ''}`)
+    <div class="acts"><button class="b" id="back">back</button><button class="b go" id="save">save</button></div>`)
   view.appendChild(box)
-  const leave = () => { $('bar').hidden = false; render() }
+  // Back goes to the menu it was opened from, not out of settings entirely.
+  const leave = () => { $('bar').hidden = false; render(); settingsSheet() }
   box.querySelector('#back').onclick = leave
-  // Last resort if a stale worker or cache is ever serving an old build.
-  box.querySelector('#hardreload')?.addEventListener('click', async (e) => {
-    e.preventDefault()
-    if ('serviceWorker' in navigator) for (const r of await navigator.serviceWorker.getRegistrations()) await r.unregister()
-    if (window.caches) for (const k of await caches.keys()) await caches.delete(k)
-    location.reload()
-  })
-  box.querySelector('#plan')?.addEventListener('click', () => planScreen(me.user))
   box.querySelector('#save').onclick = async () => {
     const body = {}
     for (const k of ['target_kcal', 'target_protein_g', 'target_carbs_g', 'target_fat_g', 'target_sugar_g', 'target_fiber_g', 'goal_kg', 'height_cm']) body[k] = box.querySelector(`#t_${k}`).value
@@ -1308,7 +1381,7 @@ function accountButton() {
   const b = $('acct')
   b.innerHTML = me?.signedIn && me.user.picture ? `<img src="${esc(me.user.picture)}" alt="">settings`
     : `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/></svg>settings`
-  b.onclick = settingsScreen
+  b.onclick = settingsSheet
 }
 
 async function boot() {

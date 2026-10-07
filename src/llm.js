@@ -142,67 +142,38 @@ async function llmOnce({ system, messages, tools, thinking, apiKey, attemptModel
 export async function verifyKey(apiKey) {
   const key = String(apiKey ?? '').trim()
   if (!key) return { ok: false, reason: 'Paste a key first.' }
-  // Try the model the app will actually use first, then the fallbacks. A key
-  // whose project cannot see one particular model is still a working key, and
-  // verifying against a model the app never calls proves nothing.
+
+  // Ask Google to LIST models rather than run one. Listing authenticates the
+  // key and proves the API is enabled, which is the whole question, and it
+  // cannot fail for reasons that have nothing to do with the key.
   //
-  // Google answers 5xx often enough that one blip would otherwise tell someone
-  // their perfectly good key is broken, so a verdict ABOUT the key is final and
-  // returned at once, while a failure to reach an opinion moves on and is only
-  // reported if nothing else works.
-  const models = [process.env.GEMINI_MODEL || 'gemini-3.5-flash', ...FALLBACKS]
-  let last = { ok: false, retry: true, reason: 'Could not reach Google just now.' }
-  for (const model of [...new Set(models)]) {
-    const r = await probeKey(key, model)
-    if (r.ok || !r.retry) return r
-    last = r
-  }
-  return last
-}
-
-async function probeKey(key, model) {
-
+  // Generating was tried first and was the wrong call: gemini-3.5-flash
+  // answered 503 "this model is currently experiencing high demand" over and
+  // over, so a perfectly good key was reported as broken because Google was
+  // busy. Probing the model the app uses sounds more thorough and is in fact
+  // less reliable, because that model is the most loaded one.
   let res
   try {
-    res = await fetch(`${ENDPOINT}/${model}:generateContent?key=${encodeURIComponent(key)}`, {
-      method: 'POST',
-      headers: { 'content-type': 'application/json' },
-      // One token. We only need Google to answer 200, and letting the model
-      // write a real sentence turned this check into a five second wait.
-      // thinkingLevel has no 'off' value - passing one 400s, which read as a
-      // bad key and locked a perfectly good one out.
-      body: JSON.stringify({
-        contents: [{ role: 'user', parts: [{ text: 'hi' }] }],
-        generationConfig: { maxOutputTokens: 1 },
-      }),
+    res = await fetch(`${ENDPOINT}?key=${encodeURIComponent(key)}&pageSize=1`, {
       signal: AbortSignal.timeout(Number(process.env.VERIFY_TIMEOUT_MS || 12_000)),
     })
   } catch (err) {
-    console.error('verifyKey', model, 'unreachable', err?.name ?? err)
+    console.error('verifyKey unreachable', err?.name ?? err)
     return { ok: false, retry: true, reason: 'Could not reach Google just now.' }
   }
 
-  // A throttled key is a working key. Google only rate limits once it has
-  // accepted who you are, so this must not read as "invalid".
-  if (res.status === 429) return { ok: true, throttled: true }
   if (res.ok) return { ok: true }
+  if (res.status === 429) return { ok: true, throttled: true } // throttled means authenticated
 
   const detail = (await res.text()).slice(0, 400)
-  // Every failure, not just the surprising ones. The 5xx branch used to return
-  // silently, so a user stuck on "Google is having trouble" left nothing behind
-  // in the logs to work from.
-  console.error('verifyKey', model, res.status, detail.replace(/\s+/g, ' ').slice(0, 220))
+  console.error('verifyKey', res.status, detail.replace(/\s+/g, ' ').slice(0, 220))
 
-  if (res.status === 400 && /API.?key.?not.?valid|API_KEY_INVALID/i.test(detail)) {
+  if (/API.?key.?not.?valid|API_KEY_INVALID/i.test(detail)) {
     return { ok: false, reason: 'Google does not recognise that key. Check you copied all of it.' }
   }
   if (res.status === 403 || /SERVICE_DISABLED|PERMISSION_DENIED/i.test(detail)) {
     return { ok: false, reason: 'That key exists but is not allowed to use Gemini. Create a new one in AI Studio.' }
   }
-  // Not this model, but perhaps another: let the caller try the next one.
-  if (res.status === 404) return { ok: false, retry: true, reason: `Gemini has no ${model} for this key.` }
-  if (res.status >= 500) return { ok: false, retry: true, reason: `Google is having trouble (${res.status}).` }
-  // Anything else is more likely our request than their key, so do not accuse
-  // the user of mistyping something they may have pasted correctly.
-  return { ok: false, retry: true, reason: `Could not check the key just now (${res.status}).` }
+  // Anything else is Google, not the key, so never say the key is wrong.
+  return { ok: false, retry: true, reason: `Google could not answer just now (${res.status}).` }
 }
