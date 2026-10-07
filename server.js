@@ -52,7 +52,12 @@ createServer(async (req, res) => {
     const file = join(ROOT, npath(rel))
     if (!file.startsWith(ROOT)) throw new Error('outside root')
     const body = await readFile(file)
-    res.setHeader('content-type', MIME[extname(file)] ?? 'application/octet-stream')
+    const type = MIME[extname(file)] ?? 'application/octet-stream'
+    res.setHeader('content-type', type)
+    // The whole app is one HTML file, so a cached copy is a cached BUILD. The
+    // service worker already refuses to cache it; the browser needs telling
+    // too. Icons and the manifest may be cached, they never change meaningfully.
+    res.setHeader('cache-control', type.startsWith('text/html') ? 'no-store' : 'public, max-age=86400')
     res.end(body)
   } catch {
     res.statusCode = 404

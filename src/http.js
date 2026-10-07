@@ -2,6 +2,14 @@
 export const send = (res, status, body) => {
   res.statusCode = status
   res.setHeader('content-type', 'application/json')
+  // Every one of these answers is about one signed-in person right now. With
+  // no cache header the browser is free to reuse them, and it does: a fresh
+  // account read /api/auth/me as "no key", saved a key, navigated, and was
+  // handed back the cached "no key" - so Start tracking returned to the page
+  // it had just completed, forever. Changing the key on an account that
+  // already had one appeared to work only because its cached answer happened
+  // to be the right one.
+  res.setHeader('cache-control', 'no-store')
   res.end(JSON.stringify(body))
 }
 
