@@ -360,6 +360,11 @@ nav button.on{color:var(--accent)}
   border-radius:var(--r2); padding:14px 15px; font:inherit; font-size:15px; text-align:left}
 .pane input:focus{outline:none; border-color:var(--accent)}
 .pane input::placeholder{color:var(--faint)}
+.okline{display:flex; align-items:center; gap:9px; margin:0 0 18px; padding:11px 13px;
+  border-radius:var(--r2); font-size:14px; font-weight:600; color:var(--accent);
+  background:rgba(125,216,143,.10); border:1px solid rgba(125,216,143,.32);
+  animation:lift .3s cubic-bezier(.2,.8,.3,1) both}
+.okline svg{width:16px; height:16px; flex:0 0 auto}
 .keysteps{counter-reset:k; margin:4px 0 0; padding:0; list-style:none}
 .keysteps li{counter-increment:k; position:relative; padding:9px 0 9px 32px; font-size:14.5px; color:var(--muted); line-height:1.5}
 .keysteps li::before{content:counter(k); position:absolute; left:0; top:8px; width:21px; height:21px;
@@ -1180,6 +1185,7 @@ function signInScreen(error) {
 function planScreen(user, note) {
   // The server asks Gemini a one-word question with this key before saving it,
   // so say that is what is happening rather than freezing the button.
+  const TICK = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg>'
   const save = async (plan, key, btn) => {
     const label = btn.textContent
     btn.disabled = true
@@ -1192,7 +1198,17 @@ function planScreen(user, note) {
         body: JSON.stringify({ plan, gemini_key: key }) })
       out = await r.json()
     } catch { out = { error: 'Could not reach the server. Try again.' } }
-    if (out.ok) { btn.textContent = 'Gemini is connected'; setTimeout(() => (location.href = '/'), 700); return }
+    if (out.ok) {
+      // The key is saved by now, so the button stops being the check and
+      // becomes the way in. The verdict belongs at the top, next to what it
+      // is a verdict about, not inside the button.
+      btn.disabled = false
+      btn.textContent = 'Start tracking'
+      btn.onclick = () => (location.href = '/')
+      const ok = document.getElementById('keyok')
+      if (ok) ok.innerHTML = `<p class="okline">${TICK}${key ? 'Gemini is connected' : 'Key saved'}</p>`
+      return
+    }
     btn.disabled = false
     btn.textContent = label
     if (slot) slot.innerHTML = `<p class="err">${esc(out.error)}</p>`
@@ -1215,6 +1231,7 @@ function planScreen(user, note) {
     },
     {
       html: `<h1>Paste your key</h1>
+        <div id="keyok"></div>
         <ol class="keysteps">
           <li>Open <a href="https://aistudio.google.com/apikey" target="_blank" rel="noopener">aistudio.google.com/apikey</a> and sign in with any Google account.</li>
           <li>Click <b>Create API key</b>, then copy the long string.</li>
@@ -1225,12 +1242,22 @@ function planScreen(user, note) {
           and never shown back, to you or anyone.</p>
         <div id="keyerr">${note ? `<p class="err" style="margin-top:12px">${esc(note)}</p>` : ''}</div>
         <div class="spacer"></div>
-        <div class="cta">${nextBtn('Start tracking', 'go')}
+        <div class="cta">${nextBtn('Check my key', 'go')}
           <button class="skip" id="bk">Back</button></div>`,
       wire: (pane, go) => {
         const key = pane.querySelector('#gkey')
-        pane.querySelector('#go').onclick = (e) => save('byok', key.value.trim(), e.target)
-        key.addEventListener('keydown', (e) => { if (e.key === 'Enter') pane.querySelector('#go').click() })
+        const btn = pane.querySelector('#go')
+        const check = () => save('byok', key.value.trim(), btn)
+        btn.onclick = check
+        key.addEventListener('keydown', (e) => { if (e.key === 'Enter') btn.click() })
+        // Editing the key after it passed makes the tick a claim about a
+        // string that is no longer in the box.
+        key.addEventListener('input', () => {
+          if (btn.onclick === check) return
+          btn.onclick = check
+          btn.textContent = 'Check my key'
+          pane.querySelector('#keyok').innerHTML = ''
+        })
         pane.querySelector('#bk').onclick = () => go(0)
       },
     },
