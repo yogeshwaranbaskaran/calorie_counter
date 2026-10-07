@@ -472,7 +472,10 @@ const cap = (t) => { const x = String(t); return x.charAt(0).toUpperCase() + x.s
 const qtyLabel = (qty, unit) => ['g', 'ml'].includes(String(unit).toLowerCase()) ? `${qty}${unit}` : `${qty} ×`
 const el = (cls, html) => { const d = document.createElement('div'); d.className = cls; if (html != null) d.innerHTML = html; return d }
 const api = async (path, opts) => {
-  const r = await fetch(path, { headers: headers(), ...opts })
+  // no-store on the client as well as the server. The server header is the
+  // real fix, but this one cannot be undone by a proxy, an old build still
+  // open in a tab, or a browser taking liberties with a header-less response.
+  const r = await fetch(path, { cache: 'no-store', headers: headers(), ...opts })
   if (r.status === 401) { gate('wrong passcode'); throw new Error('unauthorized') }
   const data = await r.json().catch(() => ({}))
   // Surface the server's own message. "Couldn't reach the server" for a
@@ -1261,7 +1264,7 @@ function planScreen(user, note) {
     let out
     try {
       const r = await fetch('/api/auth/plan', { method: 'POST', headers: { 'content-type': 'application/json' },
-        body: JSON.stringify({ plan, gemini_key: key, skip_check: skipCheck }) })
+          cache: 'no-store', body: JSON.stringify({ plan, gemini_key: key, skip_check: skipCheck }) })
       out = await r.json()
     } catch { out = { error: 'Could not reach the server. Try again.' } }
     if (out.ok) {
@@ -1382,7 +1385,12 @@ function accountButton() {
 async function boot() {
   const err = new URLSearchParams(location.search).get('error')
   if (err) history.replaceState({}, '', '/')
-  try { me = await (await fetch('/api/auth/me')).json() } catch { me = { auth: false, single_user: true } }
+  // The question this answers changes the moment a key is saved, and a
+  // navigation (unlike a manual reload) is free to answer it from cache.
+  // That is exactly what sent people back to the key page they had just
+  // finished: the reload worked, the navigation did not.
+  try { me = await (await fetch('/api/auth/me', { cache: 'no-store' })).json() }
+  catch { me = { auth: false, single_user: true } }
   if (me.auth && !me.signedIn) {
     return signInScreen(err === 'auth_failed' ? 'Google sign-in failed. Try again.' : err === 'auth_state' ? 'That sign-in link expired. Try again.' : null)
   }
