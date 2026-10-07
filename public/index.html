@@ -373,6 +373,9 @@ const MACROS = [
   { k: 'carbs_g',   t: 'target_carbs_g',   label: 'carbs',   v: 'carbs',   kcalPerG: 4 },
   { k: 'fat_g',     t: 'target_fat_g',     label: 'fat',     v: 'fat',     kcalPerG: 9 },
   { k: 'sugar_g',   t: 'target_sugar_g',   label: 'sugar',   v: 'carbs',   kcalPerG: 4, sub: true },
+  // Fibre is a carbohydrate the body barely absorbs, so it is shown but never
+  // counted toward the energy split.
+  { k: 'fiber_g',   t: 'target_fiber_g',   label: 'fibre',   v: 'fat',     kcalPerG: 0, sub: true },
 ]
 
 // Bars fill toward the TARGET when one is set, else toward the user's own
@@ -910,6 +913,7 @@ async function settingsScreen() {
     ${f('target_kcal', 'calories (kcal)', 'e.g. 1755')}
     <div class="grid2">${f('target_protein_g', 'protein (g)', '152')}${f('target_carbs_g', 'carbs (g)', '162')}</div>
     <div class="grid2">${f('target_fat_g', 'fat (g)', '58')}${f('target_sugar_g', 'sugar (g)', '37')}</div>
+    <div class="grid2">${f('target_fiber_g', 'fibre (g)', '30')}</div>
     <h3 style="margin-top:8px">body</h3>
     <div class="grid2">${f('goal_kg', 'goal weight (kg)', '75')}${f('height_cm', 'height (cm)', '183')}</div>
     <div class="acts"><button class="b" id="back">back</button><button class="b go" id="save">save</button></div>
@@ -928,7 +932,7 @@ async function settingsScreen() {
   box.querySelector('#plan')?.addEventListener('click', () => planScreen(me.user))
   box.querySelector('#save').onclick = async () => {
     const body = {}
-    for (const k of ['target_kcal', 'target_protein_g', 'target_carbs_g', 'target_fat_g', 'target_sugar_g', 'goal_kg', 'height_cm']) body[k] = box.querySelector(`#t_${k}`).value
+    for (const k of ['target_kcal', 'target_protein_g', 'target_carbs_g', 'target_fat_g', 'target_sugar_g', 'target_fiber_g', 'goal_kg', 'height_cm']) body[k] = box.querySelector(`#t_${k}`).value
     await api('/api/targets', { method: 'POST', body: JSON.stringify(body) })
     forget()
     leave()

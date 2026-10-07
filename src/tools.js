@@ -49,8 +49,9 @@ export const declarations = [
         carbs_g: { type: N },
         fat_g: { type: N },
         sugar_g: { type: N },
+        fiber_g: { type: N, description: 'dietary fibre in ONE unit; 0 for meat, eggs, dairy, oil' },
       },
-      required: ['name', 'unit', 'grams_per_unit', 'kcal', 'protein_g', 'carbs_g', 'fat_g', 'sugar_g'],
+      required: ['name', 'unit', 'grams_per_unit', 'kcal', 'protein_g', 'carbs_g', 'fat_g', 'sugar_g', 'fiber_g'],
     },
   },
   {
@@ -178,6 +179,7 @@ const scale = (food, qty) => {
     carbs_g: round(food.carbs_g * f),
     fat_g: round(food.fat_g * f),
     sugar_g: round(food.sugar_g * f),
+    fiber_g: round((food.fiber_g ?? 0) * f),
   }
 }
 
@@ -187,6 +189,7 @@ export const totals = (rows) => ({
   carbs_g: round(rows.reduce((t, r) => t + r.carbs_g, 0)),
   fat_g: round(rows.reduce((t, r) => t + r.fat_g, 0)),
   sugar_g: round(rows.reduce((t, r) => t + r.sugar_g, 0)),
+  fiber_g: round(rows.reduce((t, r) => t + (r.fiber_g ?? 0), 0)),
 })
 
 // Turns {name, qty} pairs into real rows by reading the table. Used by the
@@ -295,7 +298,7 @@ export function makeTools({ propose, forDate, userId = null }) {
         per: '100g',
         matches: rows.map((r) => ({
           name: r.name, kcal: r.kcal, protein_g: r.protein_g, carbs_g: r.carbs_g,
-          fat_g: r.fat_g, sugar_g: r.sugar_g, source: r.source,
+          fat_g: r.fat_g, sugar_g: r.sugar_g, fiber_g: r.fiber_g, source: r.source,
         })),
         how_to_use: 'Pick the best match. Save it with save_food using a SHORT everyday name the user would say ("chicken breast raw", not the USDA sentence). Prefer unit "g" with grams_per_unit 100 and these values as they are. If you convert to a piece instead (an egg, a banana), scale EVERY value by the same factor - kcal, protein, carbs, fat AND sugar - not just some of them.',
       }
@@ -322,6 +325,7 @@ export function makeTools({ propose, forDate, userId = null }) {
         carbs_g: args.carbs_g,
         fat_g: args.fat_g,
         sugar_g: args.sugar_g,
+        fiber_g: args.fiber_g ?? 0,
       })
       return { saved: normalize(args.name) }
     },

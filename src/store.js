@@ -131,17 +131,17 @@ export async function putFood(userId, food) {
   // Update-then-insert rather than ON CONFLICT: a unique index treats NULLs as
   // distinct, so in single-user mode (user_id NULL) ON CONFLICT never fires and
   // every correction inserted a second row. This form works for both modes.
-  const vals = [row.unit, row.grams_per_unit, row.kcal, row.protein_g, row.carbs_g, row.fat_g, row.sugar_g]
+  const vals = [row.unit, row.grams_per_unit, row.kcal, row.protein_g, row.carbs_g, row.fat_g, row.sugar_g, row.fiber_g ?? 0]
   const updated = await q(
     `update foods set unit=$3, grams_per_unit=$4, kcal=$5, protein_g=$6, carbs_g=$7, fat_g=$8, sugar_g=$9,
-       confirmed_at = now()
+       fiber_g=$10, confirmed_at = now()
      where user_id is not distinct from $1 and name = $2 returning id`,
     [userId, row.name, ...vals]
   )
   if (updated.length) return
   await q(
-    `insert into foods (user_id, name, unit, grams_per_unit, kcal, protein_g, carbs_g, fat_g, sugar_g, confirmed_at)
-     values ($1,$2,$3,$4,$5,$6,$7,$8,$9, now())`,
+    `insert into foods (user_id, name, unit, grams_per_unit, kcal, protein_g, carbs_g, fat_g, sugar_g, fiber_g, confirmed_at)
+     values ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10, now())`,
     [userId, row.name, ...vals]
   )
 }
@@ -165,7 +165,7 @@ export async function getLog(userId, from, to) {
     const all = await readJson('log.json', [])
     return from ? all.filter((r) => r.date >= from && r.date <= to) : all
   }
-  const cols = `id, ${DAY}, meal, name, qty, unit, grams, kcal, protein_g, carbs_g, fat_g, sugar_g`
+  const cols = `id, ${DAY}, meal, name, qty, unit, grams, kcal, protein_g, carbs_g, fat_g, sugar_g, fiber_g`
   const rows = from
     ? await q(`select ${cols} from log_entries
                where user_id is not distinct from $1 and date between $2 and $3
@@ -186,9 +186,9 @@ export async function appendLog(userId, entries) {
   }
   for (const e of entries) {
     await q(
-      `insert into log_entries (user_id, date, meal, name, qty, unit, grams, kcal, protein_g, carbs_g, fat_g, sugar_g)
-       values ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12)`,
-      [userId, e.date, e.meal ?? null, e.name, e.qty, e.unit, e.grams, e.kcal, e.protein_g, e.carbs_g, e.fat_g, e.sugar_g]
+      `insert into log_entries (user_id, date, meal, name, qty, unit, grams, kcal, protein_g, carbs_g, fat_g, sugar_g, fiber_g)
+       values ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13)`,
+      [userId, e.date, e.meal ?? null, e.name, e.qty, e.unit, e.grams, e.kcal, e.protein_g, e.carbs_g, e.fat_g, e.sugar_g, e.fiber_g ?? 0]
     )
   }
 }
@@ -210,7 +210,7 @@ export async function updateEntry(userId, id, { qty, kcal, meal, date }) {
   const scale = (f) => {
     next.grams = row.grams == null ? null : r1(row.grams * f)
     next.kcal = Math.round(row.kcal * f)
-    for (const k of ['protein_g', 'carbs_g', 'fat_g', 'sugar_g']) next[k] = r1((row[k] ?? 0) * f)
+    for (const k of ['protein_g', 'carbs_g', 'fat_g', 'sugar_g', 'fiber_g']) next[k] = r1((row[k] ?? 0) * f)
   }
 
   if (Number.isFinite(qty) && qty > 0 && qty !== Number(row.qty)) {
@@ -219,7 +219,7 @@ export async function updateEntry(userId, id, { qty, kcal, meal, date }) {
   }
   if (Number.isFinite(kcal) && kcal >= 0 && Math.round(kcal) !== Math.round(next.kcal)) {
     const f = next.kcal ? kcal / next.kcal : 1
-    for (const k of ['protein_g', 'carbs_g', 'fat_g', 'sugar_g']) next[k] = r1((next[k] ?? 0) * f)
+    for (const k of ['protein_g', 'carbs_g', 'fat_g', 'sugar_g', 'fiber_g']) next[k] = r1((next[k] ?? 0) * f)
     next.kcal = Math.round(kcal)
   }
 
@@ -237,10 +237,10 @@ export async function updateEntry(userId, id, { qty, kcal, meal, date }) {
   }
   await q(
     `update log_entries set qty=$3, grams=$4, kcal=$5, protein_g=$6, carbs_g=$7, fat_g=$8, sugar_g=$9,
-       meal=$10, date=$11
+       meal=$10, date=$11, fiber_g=$12
      where id=$1 and user_id is not distinct from $2`,
     [id, userId, next.qty, next.grams, next.kcal, next.protein_g, next.carbs_g, next.fat_g, next.sugar_g,
-     next.meal ?? null, next.date])
+     next.meal ?? null, next.date, next.fiber_g ?? 0])
   return next
 }
 
@@ -334,7 +334,7 @@ export async function deleteWeight(userId, date) {
 
 /* ---------------------------------------------------------------- targets */
 
-const TARGET_KEYS = ['target_kcal', 'target_protein_g', 'target_carbs_g', 'target_fat_g', 'target_sugar_g', 'goal_kg', 'height_cm']
+const TARGET_KEYS = ['target_kcal', 'target_protein_g', 'target_carbs_g', 'target_fat_g', 'target_sugar_g', 'target_fiber_g', 'goal_kg', 'height_cm']
 
 export async function getTargets(userId) {
   if (!remote || userId === null) return readJson('targets.json', {})

@@ -61,6 +61,9 @@ estimate over it.
 Units and what "kcal" means for each, when you call save_food:
 - Countable things (piece, bowl, cup, plate, slice, glass): kcal is for ONE of
   them. grams_per_unit is what one weighs.
+- fiber_g is dietary fibre. Meat, fish, eggs, dairy and oil are 0. Pulses,
+  vegetables, fruit and wholegrains are the sources that matter - do not leave
+  them at 0.
 - Weights and volumes (unit "g" or "ml"): kcal is PER 100, exactly as a
   nutrition label states it. Set grams_per_unit to 100. So chicken at
   180 kcal/100g is saved as unit "g", kcal 180 - and logged with qty 400.

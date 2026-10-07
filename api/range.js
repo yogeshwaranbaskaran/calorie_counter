@@ -2,7 +2,7 @@ import { getLog, localDate } from '../src/store.js'
 import { send, requireUser } from '../src/http.js'
 
 const round = (n) => Math.round(n * 10) / 10
-const KEYS = ['kcal', 'protein_g', 'carbs_g', 'fat_g', 'sugar_g']
+const KEYS = ['kcal', 'protein_g', 'carbs_g', 'fat_g', 'sugar_g', 'fiber_g']
 
 export function shiftDate(date, days) {
   const [y, m, d] = date.split('-').map(Number)
@@ -27,7 +27,7 @@ export async function computeRange(userId, { to, days, from } = {}) {
   // bars reads as "no data" rather than "you ate nothing".
   const byDate = {}
   for (let d = start; d <= end; d = shiftDate(d, 1)) {
-    byDate[d] = { date: d, kcal: 0, protein_g: 0, carbs_g: 0, fat_g: 0, sugar_g: 0, items: [] }
+    byDate[d] = { date: d, kcal: 0, protein_g: 0, carbs_g: 0, fat_g: 0, sugar_g: 0, fiber_g: 0, items: [] }
   }
 
   const foods = {}
