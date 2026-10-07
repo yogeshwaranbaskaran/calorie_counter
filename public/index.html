@@ -838,10 +838,13 @@ async function viewBody() {
   const m = b.maintenance
   view.appendChild(el('card', `<h3>maintenance, measured<span class="r">${m ? m.confidence + ' confidence' : ''}</span></h3>` + (m
     ? `<div class="bignum"><b>${m.kcal}</b><span>kcal a day, in your logged units</span></div>
-       <p class="hint">Over ${m.over_days} days you logged ${m.avg_intake} kcal/day on average and your 7-day weight moved ${m.kg_change > 0 ? '+' : ''}${m.kg_change} kg. That implies the intake that would hold you steady is <b style="color:var(--text)">${m.kcal}</b>. No formula — your own data.</p>
-       ${m.confidence === 'low' ? '<p class="hint" style="margin-top:8px">Under three weeks, water swings dominate. Treat this as a rough first read.</p>' : ''}
+       <p class="hint">Over ${m.over_days} days you logged <b style="color:var(--text)">${m.avg_intake}</b> kcal/day and your weight trend ran at
+       <b style="color:var(--text)">${m.kg_per_week} kg/week</b> across ${m.readings} readings. Holding steady would take about
+       <b style="color:var(--text)">${m.kcal}</b>. No formula — your own data.</p>
+       ${m.fit < 0.3 ? '<p class="hint" style="margin-top:8px">The readings scatter more than they trend, so this is guesswork so far. More mornings will settle it.</p>'
+         : m.confidence !== 'good' ? '<p class="hint" style="margin-top:8px">Under three weeks, water movement still inflates the trend — a new diet drops water fast, which reads as fat loss. Expect this number to fall as the weeks add up.</p>' : ''}
        <p class="hint" style="margin-top:8px">To lose ~0.5 kg/week, target about <b style="color:var(--text)">${m.kcal - 500}</b>.</p>`
-    : `<p class="hint">Needs about a week of weights alongside your food log. Then this becomes the one number the app was guessing at.</p>`)))
+    : `<p class="hint">Needs about ten days of weights alongside your food log. Then this becomes the one number the app was guessing at.</p>`)))
 
   const list = el('card', `<h3>readings<span class="r">tap to edit</span></h3>` + [...b.series].reverse().slice(0, 14).map((s) =>
     `<div class="ent" data-date="${s.date}" data-kg="${s.kg}" style="padding-left:0"><span class="n">${prettyDate(s.date)}</span><span class="k">${s.kg} kg</span><button class="x" title="remove">×</button></div>`).join(''))

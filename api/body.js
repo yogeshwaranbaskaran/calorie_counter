@@ -47,27 +47,50 @@ export default async function handler(req, res) {
     for (const r of log) byDay[r.date] = (byDay[r.date] ?? 0) + (r.kcal ?? 0)
     const intakeDays = Object.keys(byDay).sort()
 
-    // Maintenance estimate: needs weight at both ends and intake in between.
+    // Maintenance from the data: average logged intake minus the energy the
+    // weight trend implies.
+    //
+    // The trend is a LEAST-SQUARES slope over every reading, not a comparison
+    // of a first and last window. Those windows overlapped whenever there were
+    // fewer than 14 readings, and the span was measured between their median
+    // dates - so a 0.74 kg loss over 17 days was divided by 3 and reported as
+    // a 1900 kcal/day deficit. Regression uses every point, cannot overlap
+    // itself, and degrades gracefully as readings arrive.
     let maintenance = null
-    if (series.length >= 8) {
-      const first = series.slice(0, 7), last = series.slice(-7)
-      const a0 = first.reduce((t, s) => t + s.kg, 0) / first.length
-      const a1 = last.reduce((t, s) => t + s.kg, 0) / last.length
-      const d0 = first[Math.floor(first.length / 2)].date
-      const d1 = last[Math.floor(last.length / 2)].date
-      const span = Math.max(1, (new Date(d1) - new Date(d0)) / 864e5)
+    if (series.length >= 7) {
+      const t0 = new Date(series[0].date)
+      const xs = series.map((s) => (new Date(s.date) - t0) / 864e5)
+      const ys = series.map((s) => s.kg)
+      const spanDays = xs.at(-1)
+      const mx = xs.reduce((t, x) => t + x, 0) / xs.length
+      const my = ys.reduce((t, y) => t + y, 0) / ys.length
+      const sxx = xs.reduce((t, x) => t + (x - mx) ** 2, 0)
+      const sxy = xs.reduce((t, x, i) => t + (x - mx) * (ys[i] - my), 0)
+
       const inWindow = intakeDays.filter((d) => d >= series[0].date && d <= series.at(-1).date)
-      if (inWindow.length >= 7) {
+      if (sxx > 0 && spanDays >= 10 && inWindow.length >= 7) {
+        const slope = sxy / sxx // kg per day, negative = losing
         const avgIntake = inWindow.reduce((t, d) => t + byDay[d], 0) / inWindow.length
-        const dailyBalance = ((a1 - a0) * KCAL_PER_KG) / span
+
+        // How much of the scatter the trend actually explains. A low value
+        // means the readings are noise around a flat line and the number below
+        // should not be taken seriously yet.
+        const ssTot = ys.reduce((t, y) => t + (y - my) ** 2, 0)
+        const ssRes = ys.reduce((t, y, i) => t + (y - (my + slope * (xs[i] - mx))) ** 2, 0)
+        const fit = ssTot > 0 ? Math.max(0, 1 - ssRes / ssTot) : 0
+
         maintenance = {
-          kcal: Math.round(avgIntake - dailyBalance),
+          kcal: Math.round(avgIntake - slope * KCAL_PER_KG),
           avg_intake: Math.round(avgIntake),
-          kg_change: round1(a1 - a0),
-          over_days: Math.round(span),
+          kg_per_week: round1(slope * 7),
+          over_days: Math.round(spanDays),
+          readings: series.length,
           intake_days: inWindow.length,
-          // Under ~3 weeks the water swings dominate the trend.
-          confidence: span >= 28 ? 'good' : span >= 14 ? 'fair' : 'low',
+          fit: Math.round(fit * 100) / 100,
+          // Under three weeks, water movement still dominates the trend; a
+          // poor fit means the line is guesswork whatever the span.
+          confidence: spanDays >= 28 && fit >= 0.5 ? 'good'
+            : spanDays >= 14 && fit >= 0.3 ? 'fair' : 'low',
         }
       }
     }
