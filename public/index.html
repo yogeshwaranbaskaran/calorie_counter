@@ -1101,8 +1101,10 @@ const screen = (html) => { document.body.innerHTML = `<div class="gate">${html}<
 // A step-at-a-time intro rather than one long scroll. Someone opening an
 // unverified app wants one idea per screen and a way forward, not a brochure.
 function wizard(steps, i = 0, dir = 'next') {
+  const shown = steps.filter((x) => x.dots !== false)
   document.body.innerHTML = `<div class="wiz"><div class="glow"></div>
-    <div class="dots">${steps.map((_, k) => `<i class="${k <= i ? 'on' : ''}"></i>`).join('')}</div>
+    <div class="dots">${steps[i].dots === false ? ''
+      : shown.map((_, k) => `<i class="${k <= shown.indexOf(steps[i]) ? 'on' : ''}"></i>`).join('')}</div>
     <div class="pane in-${dir}" id="pane">${steps[i].html}</div></div>`
   const pane = document.getElementById('pane')
   steps[i].wire?.(pane, (k) => wizard(steps, k, k > i ? 'next' : 'back'))
@@ -1161,7 +1163,8 @@ function signInScreen(error) {
           <div class="pr"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="10" width="16" height="10" rx="2"/><path d="M8 10V7a4 4 0 0 1 8 0v3"/></svg>your targets<em>only you</em></div>
         </div>
         <p class="lead" style="margin-top:16px">Google sign-in means no password to invent, and none
-          for this agent to store. It reads your name, email and picture. Nothing else.</p>
+          for this agent to store. It reads your name, your email, and your profile photo, which
+          becomes the settings button. Nothing else.</p>
         ${error ? `<p class="err" style="margin-top:14px">${esc(error)}</p>` : ''}
         <div class="spacer"></div>
         <div class="cta">
@@ -1185,18 +1188,17 @@ function planScreen(user, note) {
   }
   const steps = [
     {
-      html: `<h1>One thing left: <em>a key</em></h1>
-        <p class="lead">Reading your meals is done by Google's Gemini. An API key is simply a
-          password that lets this agent ask Gemini on your behalf.</p>
-        <p class="lead">Every new dish costs one call. Paid for by somebody.</p>
-        <p class="lead">We would rather this agent stayed free. So bring your own key, and it is.
-          Creating one takes two minutes and costs nothing.</p>
+      html: `<h1>Your key, <em>your AI</em></h1>
+        <p class="lead">The agent uses Google's Gemini to read your meals. Gemini is not free.</p>
+        <p class="lead">A key is what lets the agent use Gemini <b>as you</b>. Google gives one to
+          anyone, in two minutes, at no cost.</p>
+        <p class="lead">Use your own and this agent is free for you.</p>
         <div class="spacer"></div>
         <div class="cta">${nextBtn('Get my free key')}
           <button class="skip" id="hosted">Use the agent's key instead</button></div>`,
       wire: (pane, go) => {
         pane.querySelector('#nx').onclick = () => go(1)
-        pane.querySelector('#hosted').onclick = (e) => save('hosted', '', e.target)
+        pane.querySelector('#hosted').onclick = () => go(2)
       },
     },
     {
@@ -1217,6 +1219,22 @@ function planScreen(user, note) {
         const key = pane.querySelector('#gkey')
         pane.querySelector('#go').onclick = (e) => save('byok', key.value.trim(), e.target)
         key.addEventListener('keydown', (e) => { if (e.key === 'Enter') pane.querySelector('#go').click() })
+        pane.querySelector('#bk').onclick = () => go(0)
+      },
+    },
+    {
+      // Not a step on the way anywhere, so it carries no progress dots.
+      dots: false,
+      html: `<h1>Not ready <em>yet</em></h1>
+        <p class="lead">Running the agent on our key needs a subscription, and payments are not
+          built yet.</p>
+        <p class="lead">So for now, bring your own Google key. It is free, it takes two minutes,
+          and the agent works exactly the same.</p>
+        <div class="spacer"></div>
+        <div class="cta">${nextBtn('Get my free key')}
+          <button class="skip" id="bk">Back</button></div>`,
+      wire: (pane, go) => {
+        pane.querySelector('#nx').onclick = () => go(1)
         pane.querySelector('#bk').onclick = () => go(0)
       },
     },
