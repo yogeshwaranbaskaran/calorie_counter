@@ -360,7 +360,7 @@ nav button.on{color:var(--accent)}
   border-radius:var(--r2); padding:14px 15px; font:inherit; font-size:15px; text-align:left}
 .pane input:focus{outline:none; border-color:var(--accent)}
 .pane input::placeholder{color:var(--faint)}
-.okline{display:flex; align-items:center; gap:9px; margin:0 0 18px; padding:11px 13px;
+.okline{display:flex; align-items:center; gap:9px; margin:16px 0 0; padding:11px 13px;
   border-radius:var(--r2); font-size:14px; font-weight:600; color:var(--accent);
   background:rgba(125,216,143,.10); border:1px solid rgba(125,216,143,.32);
   animation:lift .3s cubic-bezier(.2,.8,.3,1) both}
@@ -1231,7 +1231,6 @@ function planScreen(user, note) {
     },
     {
       html: `<h1>Paste your key</h1>
-        <div id="keyok"></div>
         <ol class="keysteps">
           <li>Open <a href="https://aistudio.google.com/apikey" target="_blank" rel="noopener">aistudio.google.com/apikey</a> and sign in with any Google account.</li>
           <li>Click <b>Create API key</b>, then copy the long string.</li>
@@ -1240,6 +1239,7 @@ function planScreen(user, note) {
         <input id="gkey" type="password" autocomplete="off" style="margin-top:16px" placeholder="${user.hasKey ? 'key saved, paste a new one to replace' : 'AIzaSy…'}">
         <p class="foot" style="text-align:left;margin-top:10px">Your key is encrypted before it is stored
           and never shown back, to you or anyone.</p>
+        <div id="keyok"></div>
         <div id="keyerr">${note ? `<p class="err" style="margin-top:12px">${esc(note)}</p>` : ''}</div>
         <div class="spacer"></div>
         <div class="cta">${nextBtn('Check my key', 'go')}
