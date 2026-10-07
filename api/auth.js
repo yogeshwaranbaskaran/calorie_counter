@@ -18,7 +18,10 @@ const redirect = (res, to, cookie) => {
 // must be in the log, with the id, rather than inferred from the symptom.
 function meHasKey(user) {
   const has = Boolean(decryptKey(user.gemini_key))
-  if (!has && user.gemini_key) console.error('me: stored key does not decrypt', { id: user.id })
+  // Temporary, while a fresh account keeps being sent back to the key page it
+  // just completed. Three fixes have been wrong because they were reasoned
+  // about rather than observed; this prints the sequence instead.
+  console.log('me', { id: user.id, plan: user.plan, stored: Boolean(user.gemini_key), hasKey: has })
   return has
 }
 
@@ -109,9 +112,7 @@ export default async function handler(req, res) {
     // in both the response and the log.
     const after = await getUser(user.id)
     const hasKey = Boolean(decryptKey(after?.gemini_key))
-    if (plan === 'byok' && !hasKey) {
-      console.error('plan saved but key does not read back', { id: user.id, stored: Boolean(after?.gemini_key) })
-    }
+    console.log('plan saved', { id: user.id, plan, stored: Boolean(after?.gemini_key), hasKey })
     return send(res, 200, { ok: true, plan, hasKey })
   }
 
