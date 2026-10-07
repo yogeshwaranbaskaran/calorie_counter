@@ -42,16 +42,27 @@ function toGemini(messages) {
 
 // A model having a bad day must not hang the app. Each attempt is capped, and
 // a timeout or a 5xx falls through to the next model in the list.
-const TIMEOUT_MS = Number(process.env.LLM_TIMEOUT_MS || 45_000)
+// 45s per attempt, three attempts, was 135s of patience for a sentence that
+// normally answers in under seven. One meal took 108s on a day when Gemini
+// was answering 503 "high demand": the primary burned its full timeout, then
+// the first fallback did too. A cap per attempt is not enough on its own,
+// because the caps add up, so the whole chain gets one budget to spend.
+const TIMEOUT_MS = Number(process.env.LLM_TIMEOUT_MS || 20_000)
+const BUDGET_MS = Number(process.env.LLM_BUDGET_MS || 45_000)
 const FALLBACKS = (process.env.GEMINI_FALLBACKS || 'gemini-3.1-flash-lite,gemini-3.5-flash-lite')
   .split(',').map((m) => m.trim()).filter(Boolean)
 
 export async function llm(opts) {
   const chain = [undefined, ...FALLBACKS] // undefined = the configured model
+  const deadline = Date.now() + BUDGET_MS
   let last
   for (let i = 0; i < chain.length; i++) {
+    // Never start an attempt there is no time left to finish. Three seconds
+    // is the least that could plausibly succeed.
+    const left = deadline - Date.now()
+    if (left < 3000 && last) throw last
     try {
-      return await llmOnce({ ...opts, attemptModel: chain[i] })
+      return await llmOnce({ ...opts, attemptModel: chain[i], timeoutMs: Math.min(TIMEOUT_MS, left) })
     } catch (err) {
       last = err
       // Only a timeout or an upstream fault is worth trying elsewhere; a bad
@@ -64,7 +75,7 @@ export async function llm(opts) {
   throw last
 }
 
-async function llmOnce({ system, messages, tools, thinking, apiKey, attemptModel }) {
+async function llmOnce({ system, messages, tools, thinking, apiKey, attemptModel, timeoutMs = TIMEOUT_MS }) {
   // Measured 2026-09-23: flash-lite went erratic (14s, 47s, 62s for the same
   // call) while plain flash was a steady 6.4s. gemini-3.6-flash is out - it is
   // capped at twenty requests a DAY on the free tier.
@@ -97,10 +108,10 @@ async function llmOnce({ system, messages, tools, thinking, apiKey, attemptModel
       method: 'POST',
       headers: { 'content-type': 'application/json' },
       body: JSON.stringify(body),
-      signal: AbortSignal.timeout(TIMEOUT_MS),
+      signal: AbortSignal.timeout(timeoutMs),
     })
   } catch (err) {
-    const e = new Error(`${model} did not answer within ${TIMEOUT_MS / 1000}s`)
+    const e = new Error(`${model} did not answer within ${Math.round(timeoutMs / 1000)}s`)
     e.code = err.name === 'TimeoutError' || err.name === 'AbortError' ? 'timeout' : 'upstream'
     throw e
   }
