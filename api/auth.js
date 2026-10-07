@@ -1,7 +1,7 @@
 // /api/auth/* - sign in with Google, session, plan and key management.
 import {
   authConfigured, authUrl, exchangeCode, upsertUser, makeSession, cookieFor,
-  clearCookie, newState, currentUser, setPlan, decryptKey,
+  clearCookie, newState, currentUser, setPlan, decryptKey, getUser,
 } from '../src/auth.js'
 import { send, readBody } from '../src/http.js'
 import { verifyKey } from '../src/llm.js'
@@ -93,7 +93,17 @@ export default async function handler(req, res) {
     } else {
       await setPlan(user.id, 'hosted', null)
     }
-    return send(res, 200, { ok: true, plan })
+
+    // Read the user back the way /api/auth/me will, and say so in the reply.
+    // A save that reports ok while the very next request says "no key" is the
+    // one failure this flow cannot explain to anybody, so it is now visible
+    // in both the response and the log.
+    const after = await getUser(user.id)
+    const hasKey = Boolean(decryptKey(after?.gemini_key))
+    if (plan === 'byok' && !hasKey) {
+      console.error('plan saved but key does not read back', { id: user.id, stored: Boolean(after?.gemini_key) })
+    }
+    return send(res, 200, { ok: true, plan, hasKey })
   }
 
   return send(res, 404, { error: 'unknown auth action' })

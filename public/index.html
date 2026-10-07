@@ -1204,10 +1204,16 @@ function planScreen(user, note) {
       // is a verdict about, not inside the button.
       btn.disabled = false
       btn.textContent = 'Start tracking'
-      btn.onclick = () => (location.href = '/')
+      // The server tells us whether the key reads back. If it does not, going
+      // to the app would bounce straight back here with no explanation.
+      btn.onclick = () => (location.href = out.hasKey === false ? '/?key=unreadable' : '/')
       const ok = document.getElementById('keyok')
       // Never claim a connection that was never tested.
-      if (ok) ok.innerHTML = `<p class="okline">${TICK}${!key || skipCheck ? 'Key saved' : 'Gemini is connected'}</p>`
+      if (ok) {
+        ok.innerHTML = out.hasKey === false
+          ? `<p class="err">Saved, but the server cannot read the key back. Tell Yogesh: SESSION_SECRET.</p>`
+          : `<p class="okline">${TICK}${!key || skipCheck ? 'Key saved' : 'Gemini is connected'}</p>`
+      }
       return
     }
     btn.disabled = false
