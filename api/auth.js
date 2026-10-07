@@ -13,6 +13,15 @@ const redirect = (res, to, cookie) => {
   res.end()
 }
 
+// The one failure that sends a user back to a page they just completed: a
+// key is in the row, and this says there is none. If that ever happens it
+// must be in the log, with the id, rather than inferred from the symptom.
+function meHasKey(user) {
+  const has = Boolean(decryptKey(user.gemini_key))
+  if (!has && user.gemini_key) console.error('me: stored key does not decrypt', { id: user.id })
+  return has
+}
+
 export default async function handler(req, res) {
   const url = new URL(req.url, 'http://x')
   const action = url.pathname.replace('/api/auth', '').replace(/^\//, '') || 'me'
@@ -32,7 +41,7 @@ export default async function handler(req, res) {
         email: user.email, name: user.name, picture: user.picture,
         plan: user.plan,
         // Never return the key itself, only whether one is set.
-        hasKey: Boolean(decryptKey(user.gemini_key)),
+        hasKey: meHasKey(user),
       },
     })
   }

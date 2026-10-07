@@ -1054,7 +1054,7 @@ function settingsSheet() {
     <button class="srow" id="s_targets">${SICO.target}targets${CHEV}</button>
     ${me?.signedIn ? `<button class="srow" id="s_plan">${SICO.key}AI plan &amp; key${CHEV}</button>
     <a class="srow" href="/api/auth/logout">${SICO.out}sign out</a>` : ''}
-    <p class="hint">build <code>${document.querySelector('meta[name=build]')?.content ?? '?'}</code> · <a href="#" id="hardreload" style="color:var(--muted)">force refresh</a></p>
+    <p class="hint">build <code>${document.querySelector('meta[name=build]')?.content ?? '?'}</code></p>
     <button class="srow quiet" id="s_back">back</button>
   </div>`
   document.body.appendChild(scrim)
@@ -1081,13 +1081,6 @@ function settingsSheet() {
   scrim.querySelector('#s_back').onclick = () => close()
   scrim.querySelector('#s_targets').onclick = () => close(targetsScreen)
   scrim.querySelector('#s_plan')?.addEventListener('click', () => close(() => planScreen(me.user)))
-  // Last resort if a stale worker or cache is ever serving an old build.
-  scrim.querySelector('#hardreload')?.addEventListener('click', async (e) => {
-    e.preventDefault()
-    if ('serviceWorker' in navigator) for (const r of await navigator.serviceWorker.getRegistrations()) await r.unregister()
-    if (window.caches) for (const k of await caches.keys()) await caches.delete(k)
-    location.reload()
-  })
 }
 
 async function targetsScreen() {
@@ -1325,6 +1318,8 @@ function planScreen(user, note) {
         <input id="gkey" type="password" autocomplete="off" style="margin-top:16px" placeholder="${user.hasKey ? 'key saved, paste a new one to replace' : 'AIzaSy…'}">
         <p class="foot" style="text-align:left;margin-top:10px">Your key is encrypted before it is stored
           and never shown back, to you or anyone.</p>
+        <p class="foot" style="text-align:left;margin-top:6px">${esc(user.email ?? '')} ·
+          ${user.hasKey ? 'a key is already saved for this account' : 'no key saved yet'}</p>
         <div id="keyok"></div>
         <div id="keyerr">${note ? `<p class="err" style="margin-top:12px">${esc(note)}</p>` : ''}</div>
         <div class="spacer"></div>
