@@ -1283,6 +1283,8 @@ function planScreen(user, note) {
       // the same browser changed nothing. reload() revalidates, exactly as the
       // refresh key does.
       btn.onclick = () => location.reload()
+      const line = document.getElementById('acctline')
+      if (line && out.hasKey) line.textContent = `${user.email ?? ''} · key saved for this account`
       const ok = document.getElementById('keyok')
       // Never claim a connection that was never tested.
       if (ok) {
@@ -1328,7 +1330,7 @@ function planScreen(user, note) {
         <input id="gkey" type="password" autocomplete="off" style="margin-top:16px" placeholder="${user.hasKey ? 'key saved, paste a new one to replace' : 'AIzaSy…'}">
         <p class="foot" style="text-align:left;margin-top:10px">Your key is encrypted before it is stored
           and never shown back, to you or anyone.</p>
-        <p class="foot" style="text-align:left;margin-top:6px">${esc(user.email ?? '')} ·
+        <p class="foot" style="text-align:left;margin-top:6px" id="acctline">${esc(user.email ?? '')} ·
           ${user.hasKey ? 'a key is already saved for this account' : 'no key saved yet'}</p>
         <div id="keyok"></div>
         <div id="keyerr">${note ? `<p class="err" style="margin-top:12px">${esc(note)}</p>` : ''}</div>

@@ -36,7 +36,14 @@ export default async function handler(req, res) {
   /* who am I - the page calls this on load to decide what to render */
   if (action === 'me') {
     if (!authConfigured()) return send(res, 200, { auth: false, single_user: true })
-    const user = await currentUser(req)
+    // Always from the database. The cache exists to keep a round trip off the
+    // hot path of every logged meal; this runs once per page load, and it is
+    // the one answer that must never be a moment out of date. A cached copy
+    // here says "no key" to someone who has just saved one, and sends them
+    // back to the page they finished - which is exactly what was happening,
+    // whether the stale copy came from this process or from the outgoing one
+    // during a deploy.
+    const user = await currentUser(req, true)
     if (!user) return send(res, 200, { auth: true, signedIn: false })
     return send(res, 200, {
       auth: true, signedIn: true,

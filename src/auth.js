@@ -156,8 +156,8 @@ async function adoptOrphans(userId) {
 const userCache = new Map()
 const USER_TTL = 60_000
 
-export async function getUser(id) {
-  const hit = userCache.get(id)
+export async function getUser(id, fresh = false) {
+  const hit = fresh ? null : userCache.get(id)
   if (hit && hit.at > Date.now() - USER_TTL) return hit.user
   const rows = await sql('select * from users where id = $1', [id])
   const user = rows[0] ?? null
@@ -187,7 +187,7 @@ export function keyForUser(user) {
 }
 
 // Resolves the signed-in user for a request, or null.
-export async function currentUser(req) {
+export async function currentUser(req, fresh = false) {
   if (!authConfigured()) return null
   const bearer = (req.headers.authorization || '').replace(/^Bearer\s+/i, '')
   if (bearer && API_TOKEN && OWNER && safeEqual(bearer, API_TOKEN)) {
@@ -195,7 +195,7 @@ export async function currentUser(req) {
     return rows[0] ?? null
   }
   const id = readSession(req.headers.cookie)
-  return id ? getUser(id) : null
+  return id ? getUser(id, fresh) : null
 }
 
 const safeEqual = (a, b) =>
