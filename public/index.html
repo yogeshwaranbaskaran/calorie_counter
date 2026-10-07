@@ -272,6 +272,38 @@ nav button.on{color:var(--accent)}
 
 /* ---------------- auth screens ---------------- */
 .gate{margin:auto; padding:26px 22px; max-width:380px; width:100%}
+
+/* ---------- landing (signed out) ---------- */
+.land{width:100%; max-width:560px; margin:0 auto; padding:30px 20px 48px}
+.land section{margin-bottom:38px}
+.land .mark{width:62px; height:62px; border-radius:18px; display:block; margin-bottom:18px}
+.land h1{font-size:30px; line-height:1.15; letter-spacing:-.02em; margin-bottom:12px; font-weight:700}
+.land h1 em{font-style:normal; color:var(--accent)}
+.land .sub{color:var(--muted); font-size:16px; line-height:1.55; margin:0 0 24px; max-width:40ch}
+.land h2{font-size:12px; color:var(--faint); font-weight:700; letter-spacing:.09em; text-transform:uppercase; margin-bottom:14px}
+.step{display:flex; gap:14px; align-items:flex-start; padding:14px 0; border-bottom:1px solid var(--line)}
+.step:last-child{border-bottom:0}
+.step .ic{flex:0 0 auto; width:38px; height:38px; border-radius:11px; background:var(--raised);
+  display:flex; align-items:center; justify-content:center; color:var(--accent)}
+.step .ic svg{width:19px; height:19px}
+.step b{display:block; font-size:15px; margin-bottom:3px; font-weight:600}
+.step p{margin:0; color:var(--muted); font-size:13.5px; line-height:1.5}
+.step code{background:var(--raised); padding:2px 6px; border-radius:5px; font-size:12.5px; color:var(--text)}
+.note{background:var(--surface); border:1px solid var(--line); border-radius:var(--r); padding:16px 18px}
+.note p{margin:0 0 10px; font-size:14px; line-height:1.6; color:var(--muted)}
+.note p:last-child{margin-bottom:0}
+.note b{color:var(--text)}
+.keysteps{counter-reset:k; margin:0; padding:0; list-style:none}
+.keysteps li{counter-increment:k; position:relative; padding:9px 0 9px 34px; font-size:14px; color:var(--muted); line-height:1.5}
+.keysteps li::before{content:counter(k); position:absolute; left:0; top:8px; width:22px; height:22px;
+  border-radius:50%; background:var(--raised); color:var(--accent); font-size:11.5px; font-weight:700;
+  display:flex; align-items:center; justify-content:center}
+.keysteps a{color:var(--accent)}
+.land .foot{color:var(--faint); font-size:12.5px; text-align:center; margin-top:22px}
+.land .foot a{color:var(--muted)}
+.rise{animation:rise .35s cubic-bezier(.2,.7,.3,1) both}
+@keyframes rise{from{opacity:0; transform:translateY(12px)} to{opacity:1; transform:none}}
+@media (prefers-reduced-motion:reduce){ .rise{animation:none} }
 .gate h2{font-size:24px; margin-bottom:6px; letter-spacing:-.01em}
 .gate p{color:var(--muted); font-size:14px; margin:0 0 20px}
 .gate input{width:100%; margin:6px 0 2px}
@@ -999,14 +1031,86 @@ $('picker').addEventListener('change', () => $('picker').value && setDay($('pick
 const GOOGLE_SVG = `<svg viewBox="0 0 48 48"><path fill="#EA4335" d="M24 9.5c3.5 0 6.6 1.2 9 3.6l6.7-6.7C35.6 2.6 30.2 0 24 0 14.6 0 6.5 5.4 2.6 13.2l7.8 6.1C12.3 13.2 17.6 9.5 24 9.5z"/><path fill="#4285F4" d="M46.98 24.5c0-1.6-.15-3.2-.43-4.7H24v9h12.9c-.56 3-2.24 5.5-4.77 7.2l7.5 5.8c4.4-4 6.9-10 6.9-17.3z"/><path fill="#FBBC05" d="M10.4 28.7a14.5 14.5 0 010-9.4l-7.8-6.1a24 24 0 000 21.6l7.8-6.1z"/><path fill="#34A853" d="M24 48c6.5 0 11.9-2.1 15.9-5.8l-7.5-5.8c-2.1 1.4-4.8 2.2-8.4 2.2-6.4 0-11.7-3.7-13.6-9.8l-7.8 6.1C6.5 42.6 14.6 48 24 48z"/></svg>`
 const screen = (html) => { document.body.innerHTML = `<div class="gate">${html}</div>` }
 
-function signInScreen(error) {
-  screen(`<h2>Calorie Counter</h2><p>Tell it what you ate. It works out the calories, you confirm, it's logged.</p>
-    ${error ? `<p class="err" style="margin-bottom:14px">${esc(error)}</p>` : ''}
-    <a class="gsi" href="/api/auth/start">${GOOGLE_SVG}Continue with Google</a>
-    <p style="margin-top:18px;font-size:13px;color:var(--faint)">A food and weight tracker. You type what you ate,
-      it works out the nutrition, you confirm. Your log is yours alone.
-      <a href="/privacy.html" style="color:var(--muted)">Privacy</a></p>`)
+const ICO = {
+  type: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 7h16M4 12h10M4 17h7"/></svg>',
+  brain: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5a3 3 0 0 0-6 0 3 3 0 0 0-1 5.8A3 3 0 0 0 7 17a3 3 0 0 0 5 1 3 3 0 0 0 5-1 3 3 0 0 0 2-6.2A3 3 0 0 0 18 5a3 3 0 0 0-6 0z"/><path d="M12 5v13"/></svg>',
+  check: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg>',
+  chart: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 17l6-6 4 4 8-8M15 7h6v6"/></svg>',
+  lock: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="10" width="16" height="10" rx="2"/><path d="M8 10V7a4 4 0 0 1 8 0v3"/></svg>',
+  key: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="8" cy="15" r="4"/><path d="M11 12l9-9M17 6l2 2M14 9l2 2"/></svg>',
 }
+
+function signInScreen(error) {
+  const cta = (id) => `<a class="gsi" id="${id}" href="/api/auth/start">${GOOGLE_SVG}Continue with Google</a>`
+  document.body.innerHTML = `<div class="land rise">
+    <section>
+      <img class="mark" src="/icon.svg" alt="">
+      <h1>Tell it what you ate.<br>It does <em>the arithmetic</em>.</h1>
+      <p class="sub">A food and weight tracker that reads plain sentences. No searching a database,
+        no picking from dropdowns — type the way you'd say it.</p>
+      ${error ? `<p class="err" style="margin-bottom:14px">${esc(error)}</p>` : ''}
+      ${cta('cta1')}
+    </section>
+
+    <section>
+      <h2>How it works</h2>
+      <div class="step"><span class="ic">${ICO.type}</span><div>
+        <b>Type it however you'd say it</b>
+        <p><code>200g rice, 3 boiled eggs and a banana</code> — that's a whole meal logged.</p></div></div>
+      <div class="step"><span class="ic">${ICO.brain}</span><div>
+        <b>It works out the nutrition</b>
+        <p>Checks your own food list first, then a database of 8,000 measured foods, and only
+           estimates when neither has it.</p></div></div>
+      <div class="step"><span class="ic">${ICO.check}</span><div>
+        <b>You confirm before anything is saved</b>
+        <p>Every number is editable. Correct one once and it remembers — your "dosa" becomes
+           <i>your</i> dosa.</p></div></div>
+      <div class="step"><span class="ic">${ICO.chart}</span><div>
+        <b>It measures what you can't guess</b>
+        <p>Log your weight and it works out your real maintenance calories from your own intake
+           and weight trend. No formulas.</p></div></div>
+    </section>
+
+    <section>
+      <h2>Why sign in with Google</h2>
+      <div class="note">
+        <p><b>So your log is yours.</b> Everything you record — food, weight, targets — is tied to
+          your account and shown only to you. Nobody else signed in can see it.</p>
+        <p>It also means your food list stays personal. The app learns your portions and your
+          corrections, and those shouldn't be mixed with anyone else's.</p>
+        <p>Google sign-in is used so there's no password to invent or for this app to store.
+          It reads your email, name and picture — nothing else.</p>
+      </div>
+    </section>
+
+    <section>
+      <h2>Why it asks for an API key</h2>
+      <div class="note">
+        <p><b>Reading your sentence costs money.</b> Working out what "200g chicken and two chapati"
+          contains is done by Google's Gemini, and every meal is a paid API call.</p>
+        <p>So you choose: <b>bring your own key and it's free</b>, or use the app's key, which will
+          need a subscription once that exists.</p>
+        <p>Your key is encrypted before it's stored and is never shown back — not to you, not to
+          anyone. It's used only for your own meals.</p>
+      </div>
+    </section>
+
+    <section>
+      <h2>Getting a free key — about 2 minutes</h2>
+      <ol class="keysteps">
+        <li>Open <a href="https://aistudio.google.com/apikey" target="_blank" rel="noopener">aistudio.google.com/apikey</a> and sign in with any Google account.</li>
+        <li>Click <b>Create API key</b>, then copy the long string it gives you.</li>
+        <li>Paste it here after signing in. That's it — Google's free tier covers normal daily use.</li>
+      </ol>
+    </section>
+
+    <section style="margin-bottom:0">
+      ${cta('cta2')}
+      <p class="foot">Private by default · <a href="/privacy.html">Privacy</a></p>
+    </section>
+  </div>`
+}
+
 function planScreen(user, note) {
   screen(`<h2>Choose how you pay for the AI</h2>
     <p>Every meal you log asks Gemini to work out the nutrition. That costs someone an API call.</p>
