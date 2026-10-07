@@ -4,6 +4,7 @@ import {
   clearCookie, newState, currentUser, setPlan, decryptKey,
 } from '../src/auth.js'
 import { send, readBody } from '../src/http.js'
+import { verifyKey } from '../src/llm.js'
 
 const redirect = (res, to, cookie) => {
   res.statusCode = 302
@@ -78,6 +79,12 @@ export default async function handler(req, res) {
       // Keep an existing key when the field is left blank on a re-save.
       if (!key && !decryptKey(user.gemini_key)) {
         return send(res, 400, { error: 'Paste your Gemini API key to use the free plan.' })
+      }
+      // Only a newly pasted key is checked. A blank field means "keep the one
+      // you already have", which was verified when it was first saved.
+      if (key) {
+        const check = await verifyKey(key)
+        if (!check.ok) return send(res, 400, { error: check.reason, retry: Boolean(check.retry) })
       }
       await setPlan(user.id, 'byok', key || decryptKey(user.gemini_key))
     } else {

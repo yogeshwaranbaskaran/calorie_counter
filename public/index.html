@@ -1178,13 +1178,25 @@ function signInScreen(error) {
 }
 
 function planScreen(user, note) {
+  // The server asks Gemini a one-word question with this key before saving it,
+  // so say that is what is happening rather than freezing the button.
   const save = async (plan, key, btn) => {
+    const label = btn.textContent
     btn.disabled = true
-    const r = await fetch('/api/auth/plan', { method: 'POST', headers: { 'content-type': 'application/json' },
-      body: JSON.stringify({ plan, gemini_key: key }) })
-    const out = await r.json()
-    if (out.ok) location.href = '/'
-    else { btn.disabled = false; planScreen(user, out.error) }
+    btn.textContent = key ? 'checking your key…' : 'saving…'
+    const slot = document.getElementById('keyerr')
+    if (slot) slot.innerHTML = '' // last attempt's complaint is not about this one
+    let out
+    try {
+      const r = await fetch('/api/auth/plan', { method: 'POST', headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ plan, gemini_key: key }) })
+      out = await r.json()
+    } catch { out = { error: 'Could not reach the server. Try again.' } }
+    if (out.ok) { btn.textContent = 'Gemini is connected'; setTimeout(() => (location.href = '/'), 700); return }
+    btn.disabled = false
+    btn.textContent = label
+    if (slot) slot.innerHTML = `<p class="err">${esc(out.error)}</p>`
+    else planScreen(user, out.error)
   }
   const steps = [
     {
@@ -1211,7 +1223,7 @@ function planScreen(user, note) {
         <input id="gkey" type="password" autocomplete="off" style="margin-top:16px" placeholder="${user.hasKey ? 'key saved, paste a new one to replace' : 'AIzaSy…'}">
         <p class="foot" style="text-align:left;margin-top:10px">Your key is encrypted before it is stored
           and never shown back, to you or anyone.</p>
-        ${note ? `<p class="err" style="margin-top:12px">${esc(note)}</p>` : ''}
+        <div id="keyerr">${note ? `<p class="err" style="margin-top:12px">${esc(note)}</p>` : ''}</div>
         <div class="spacer"></div>
         <div class="cta">${nextBtn('Start tracking', 'go')}
           <button class="skip" id="bk">Back</button></div>`,

@@ -133,3 +133,60 @@ async function llmOnce({ system, messages, tools, thinking, apiKey, attemptModel
     _raw: parts,
   }
 }
+
+// Does this key actually work? Asked before a key is saved, so nobody gets
+// through onboarding with a typo and discovers it at their first meal.
+//
+// Deliberately its own small request rather than llm(): no fallback chain, no
+// retries, and a short timeout, because a person is watching a button spin.
+export async function verifyKey(apiKey) {
+  const key = String(apiKey ?? '').trim()
+  if (!key) return { ok: false, reason: 'Paste a key first.' }
+  // Google answers 503 often enough that one blip would otherwise tell someone
+  // their perfectly good key is broken. A verdict ABOUT the key is final; a
+  // failure to reach an opinion is worth one more go.
+  const first = await probeKey(key)
+  if (!first.retry) return first
+  return probeKey(key)
+}
+
+async function probeKey(key) {
+
+  const model = (process.env.GEMINI_FALLBACKS || 'gemini-3.1-flash-lite').split(',')[0].trim()
+  let res
+  try {
+    res = await fetch(`${ENDPOINT}/${model}:generateContent?key=${encodeURIComponent(key)}`, {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      // One token. We only need Google to answer 200, and letting the model
+      // write a real sentence turned this check into a five second wait.
+      // thinkingLevel has no 'off' value - passing one 400s, which read as a
+      // bad key and locked a perfectly good one out.
+      body: JSON.stringify({
+        contents: [{ role: 'user', parts: [{ text: 'hi' }] }],
+        generationConfig: { maxOutputTokens: 1 },
+      }),
+      signal: AbortSignal.timeout(Number(process.env.VERIFY_TIMEOUT_MS || 12_000)),
+    })
+  } catch {
+    return { ok: false, retry: true, reason: 'Could not reach Google just now. Try again.' }
+  }
+
+  // A throttled key is a working key. Google only rate limits once it has
+  // accepted who you are, so this must not read as "invalid".
+  if (res.status === 429) return { ok: true, throttled: true }
+  if (res.ok) return { ok: true }
+
+  const detail = (await res.text()).slice(0, 400)
+  if (res.status === 400 && /API.?key.?not.?valid|API_KEY_INVALID/i.test(detail)) {
+    return { ok: false, reason: 'Google does not recognise that key. Check you copied all of it.' }
+  }
+  if (res.status === 403 || /SERVICE_DISABLED|PERMISSION_DENIED/i.test(detail)) {
+    return { ok: false, reason: 'That key exists but is not allowed to use Gemini. Create a new one in AI Studio.' }
+  }
+  if (res.status >= 500) return { ok: false, retry: true, reason: 'Google is having trouble. Try again in a moment.' }
+  // Anything else is more likely our request than their key, so do not accuse
+  // the user of mistyping something they may have pasted correctly.
+  console.error('verifyKey unexpected', res.status, detail)
+  return { ok: false, retry: true, reason: 'Could not check the key just now. Try again.' }
+}
