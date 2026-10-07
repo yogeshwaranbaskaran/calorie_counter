@@ -273,34 +273,51 @@ nav button.on{color:var(--accent)}
 /* ---------------- auth screens ---------------- */
 .gate{margin:auto; padding:26px 22px; max-width:380px; width:100%}
 
-/* ---------- landing (signed out) ---------- */
-.land{width:100%; max-width:560px; margin:0 auto; padding:30px 20px 48px}
-.land section{margin-bottom:38px}
-.land .mark{width:62px; height:62px; border-radius:18px; display:block; margin-bottom:18px}
-.land h1{font-size:30px; line-height:1.15; letter-spacing:-.02em; margin-bottom:12px; font-weight:700}
-.land h1 em{font-style:normal; color:var(--accent)}
-.land .sub{color:var(--muted); font-size:16px; line-height:1.55; margin:0 0 24px; max-width:40ch}
-.land h2{font-size:12px; color:var(--faint); font-weight:700; letter-spacing:.09em; text-transform:uppercase; margin-bottom:14px}
-.step{display:flex; gap:14px; align-items:flex-start; padding:14px 0; border-bottom:1px solid var(--line)}
-.step:last-child{border-bottom:0}
-.step .ic{flex:0 0 auto; width:38px; height:38px; border-radius:11px; background:var(--raised);
-  display:flex; align-items:center; justify-content:center; color:var(--accent)}
-.step .ic svg{width:19px; height:19px}
-.step b{display:block; font-size:15px; margin-bottom:3px; font-weight:600}
-.step p{margin:0; color:var(--muted); font-size:13.5px; line-height:1.5}
-.step code{background:var(--raised); padding:2px 6px; border-radius:5px; font-size:12.5px; color:var(--text)}
-.note{background:var(--surface); border:1px solid var(--line); border-radius:var(--r); padding:16px 18px}
-.note p{margin:0 0 10px; font-size:14px; line-height:1.6; color:var(--muted)}
-.note p:last-child{margin-bottom:0}
-.note b{color:var(--text)}
-.keysteps{counter-reset:k; margin:0; padding:0; list-style:none}
-.keysteps li{counter-increment:k; position:relative; padding:9px 0 9px 34px; font-size:14px; color:var(--muted); line-height:1.5}
-.keysteps li::before{content:counter(k); position:absolute; left:0; top:8px; width:22px; height:22px;
-  border-radius:50%; background:var(--raised); color:var(--accent); font-size:11.5px; font-weight:700;
+/* ---------- onboarding wizard ---------- */
+.wiz{min-height:100%; display:flex; flex-direction:column; max-width:520px; margin:0 auto; width:100%;
+  padding:22px 22px calc(22px + env(safe-area-inset-bottom))}
+.dots{display:flex; gap:6px; margin-bottom:26px; flex:0 0 auto}
+.dots i{height:3px; flex:1; border-radius:2px; background:var(--line); transition:background .3s}
+.dots i.on{background:var(--accent)}
+.pane{flex:1; display:flex; flex-direction:column; min-height:0}
+.pane.in-next{animation:inNext .34s cubic-bezier(.2,.75,.3,1) both}
+.pane.in-back{animation:inBack .34s cubic-bezier(.2,.75,.3,1) both}
+@keyframes inNext{from{opacity:0; transform:translateX(26px)} to{opacity:1; transform:none}}
+@keyframes inBack{from{opacity:0; transform:translateX(-26px)} to{opacity:1; transform:none}}
+@media (prefers-reduced-motion:reduce){ .pane.in-next,.pane.in-back{animation:none} }
+
+.pane .mark{width:54px; height:54px; border-radius:16px; display:block; margin-bottom:20px}
+.pane h1{font-size:27px; line-height:1.2; letter-spacing:-.02em; font-weight:700; margin-bottom:12px}
+.pane h1 em{font-style:normal; color:var(--accent)}
+.pane .lead{color:var(--muted); font-size:15.5px; line-height:1.6; margin:0 0 8px; max-width:38ch}
+.pane .spacer{flex:1; min-height:18px}
+.pane .cta{display:flex; flex-direction:column; gap:10px; flex:0 0 auto}
+.pane .cta .b{width:100%; padding:14px}
+.skip{background:none; border:0; color:var(--faint); font-size:13px; cursor:pointer; padding:8px}
+
+.flow{margin:6px 0 0}
+.flow .ln{display:flex; gap:13px; align-items:flex-start; padding:11px 0}
+.flow .n{flex:0 0 auto; width:25px; height:25px; border-radius:8px; background:var(--raised); color:var(--accent);
+  font-size:12px; font-weight:700; display:flex; align-items:center; justify-content:center; margin-top:1px}
+.flow .ln p{margin:0; font-size:14.5px; line-height:1.55; color:var(--text)}
+.flow .ln p span{display:block; color:var(--muted); font-size:13.5px; white-space:normal; margin-top:2px}
+.flow .tail{margin:14px 0 0; padding:12px 14px; background:var(--raised); border-radius:var(--r2);
+  font-size:13.5px; color:var(--muted); line-height:1.55}
+.flow .tail b{color:var(--accent)}
+.pane code{background:var(--raised); padding:2px 7px; border-radius:5px; font-size:13px; color:var(--text)}
+
+.pane input{width:100%; background:var(--raised); border:1px solid var(--line); color:var(--text);
+  border-radius:var(--r2); padding:14px 15px; font:inherit; font-size:15px; text-align:left}
+.pane input:focus{outline:none; border-color:var(--accent)}
+.pane input::placeholder{color:var(--faint)}
+.keysteps{counter-reset:k; margin:4px 0 0; padding:0; list-style:none}
+.keysteps li{counter-increment:k; position:relative; padding:9px 0 9px 32px; font-size:14.5px; color:var(--muted); line-height:1.5}
+.keysteps li::before{content:counter(k); position:absolute; left:0; top:8px; width:21px; height:21px;
+  border-radius:50%; background:var(--raised); color:var(--accent); font-size:11px; font-weight:700;
   display:flex; align-items:center; justify-content:center}
 .keysteps a{color:var(--accent)}
-.land .foot{color:var(--faint); font-size:12.5px; text-align:center; margin-top:22px}
-.land .foot a{color:var(--muted)}
+.pane .foot{color:var(--faint); font-size:12.5px; text-align:center; margin-top:14px}
+.pane .foot a{color:var(--muted)}
 .rise{animation:rise .35s cubic-bezier(.2,.7,.3,1) both}
 @keyframes rise{from{opacity:0; transform:translateY(12px)} to{opacity:1; transform:none}}
 @media (prefers-reduced-motion:reduce){ .rise{animation:none} }
@@ -653,7 +670,7 @@ async function viewLog() {
   } else if (!chat.length) view.appendChild(intro())
 
   if (me?.signedIn && me.user.plan === 'hosted' && !sessionStorage.getItem('hostedNote')) {
-    view.appendChild(el('banner', `<b>You're on the app's key.</b> This will need a subscription once payments are live.`))
+    view.appendChild(el('banner', `<b>You're on the agent's key.</b> This will need a subscription once payments are live.`))
     sessionStorage.setItem('hostedNote', '1')
   }
   chat.forEach((n) => view.appendChild(n))
@@ -852,7 +869,7 @@ async function viewBody() {
   view.appendChild(form)
 
   if (!b.series.length) {
-    return view.appendChild(el('card', `<h3>trend</h3><p class="hint">Log your first weight above. After a week the trend appears; after three the app measures your real maintenance calories from it.</p>`))
+    return view.appendChild(el('card', `<h3>trend</h3><p class="hint">Log your first weight above. After a week the trend appears; after three the agent measures your real maintenance calories from it.</p>`))
   }
 
   const dir = (v) => v == null ? '—' : `${v > 0 ? '+' : ''}${v} kg`
@@ -879,7 +896,7 @@ async function viewBody() {
        ${m.fit < 0.3 ? '<p class="hint" style="margin-top:8px">The readings scatter more than they trend, so this is guesswork so far. More mornings will settle it.</p>'
          : m.confidence !== 'good' ? '<p class="hint" style="margin-top:8px">Under three weeks, water movement still inflates the trend — a new diet drops water fast, which reads as fat loss. Expect this number to fall as the weeks add up.</p>' : ''}
        <p class="hint" style="margin-top:8px">To lose ~0.5 kg/week, target about <b style="color:var(--text)">${m.kcal - 500}</b>.</p>`
-    : `<p class="hint">Needs about ten days of weights alongside your food log. Then this becomes the one number the app was guessing at.</p>`)))
+    : `<p class="hint">Needs about ten days of weights alongside your food log. Then this becomes the one number the agent was guessing at.</p>`)))
 
   const list = el('card', `<h3>readings<span class="r">tap to edit</span></h3>` + [...b.series].reverse().slice(0, 14).map((s) =>
     `<div class="ent" data-date="${s.date}" data-kg="${s.kg}" style="padding-left:0"><span class="n">${prettyDate(s.date)}</span><span class="k">${s.kg} kg</span><button class="x" title="remove">×</button></div>`).join(''))
@@ -1031,107 +1048,120 @@ $('picker').addEventListener('change', () => $('picker').value && setDay($('pick
 const GOOGLE_SVG = `<svg viewBox="0 0 48 48"><path fill="#EA4335" d="M24 9.5c3.5 0 6.6 1.2 9 3.6l6.7-6.7C35.6 2.6 30.2 0 24 0 14.6 0 6.5 5.4 2.6 13.2l7.8 6.1C12.3 13.2 17.6 9.5 24 9.5z"/><path fill="#4285F4" d="M46.98 24.5c0-1.6-.15-3.2-.43-4.7H24v9h12.9c-.56 3-2.24 5.5-4.77 7.2l7.5 5.8c4.4-4 6.9-10 6.9-17.3z"/><path fill="#FBBC05" d="M10.4 28.7a14.5 14.5 0 010-9.4l-7.8-6.1a24 24 0 000 21.6l7.8-6.1z"/><path fill="#34A853" d="M24 48c6.5 0 11.9-2.1 15.9-5.8l-7.5-5.8c-2.1 1.4-4.8 2.2-8.4 2.2-6.4 0-11.7-3.7-13.6-9.8l-7.8 6.1C6.5 42.6 14.6 48 24 48z"/></svg>`
 const screen = (html) => { document.body.innerHTML = `<div class="gate">${html}</div>` }
 
-const ICO = {
-  type: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 7h16M4 12h10M4 17h7"/></svg>',
-  brain: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5a3 3 0 0 0-6 0 3 3 0 0 0-1 5.8A3 3 0 0 0 7 17a3 3 0 0 0 5 1 3 3 0 0 0 5-1 3 3 0 0 0 2-6.2A3 3 0 0 0 18 5a3 3 0 0 0-6 0z"/><path d="M12 5v13"/></svg>',
-  check: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg>',
-  chart: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 17l6-6 4 4 8-8M15 7h6v6"/></svg>',
-  lock: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="10" width="16" height="10" rx="2"/><path d="M8 10V7a4 4 0 0 1 8 0v3"/></svg>',
-  key: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="8" cy="15" r="4"/><path d="M11 12l9-9M17 6l2 2M14 9l2 2"/></svg>',
+// A step-at-a-time intro rather than one long scroll. Someone opening an
+// unverified app wants one idea per screen and a way forward, not a brochure.
+function wizard(steps, i = 0, dir = 'next') {
+  document.body.innerHTML = `<div class="wiz">
+    <div class="dots">${steps.map((_, k) => `<i class="${k <= i ? 'on' : ''}"></i>`).join('')}</div>
+    <div class="pane in-${dir}" id="pane">${steps[i].html}</div></div>`
+  const pane = document.getElementById('pane')
+  steps[i].wire?.(pane, (k) => wizard(steps, k, k > i ? 'next' : 'back'))
 }
 
+const nextBtn = (label, id = 'nx') => `<button class="b go" id="${id}">${label}</button>`
+
 function signInScreen(error) {
-  const cta = (id) => `<a class="gsi" id="${id}" href="/api/auth/start">${GOOGLE_SVG}Continue with Google</a>`
-  document.body.innerHTML = `<div class="land rise">
-    <section>
-      <img class="mark" src="/icon.svg" alt="">
-      <h1>Tell it what you ate.<br>It does <em>the arithmetic</em>.</h1>
-      <p class="sub">A food and weight tracker that reads plain sentences. No searching a database,
-        no picking from dropdowns — type the way you'd say it.</p>
-      ${error ? `<p class="err" style="margin-bottom:14px">${esc(error)}</p>` : ''}
-      ${cta('cta1')}
-    </section>
-
-    <section>
-      <h2>How it works</h2>
-      <div class="step"><span class="ic">${ICO.type}</span><div>
-        <b>Type it however you'd say it</b>
-        <p><code>200g rice, 3 boiled eggs and a banana</code> — that's a whole meal logged.</p></div></div>
-      <div class="step"><span class="ic">${ICO.brain}</span><div>
-        <b>It works out the nutrition</b>
-        <p>Checks your own food list first, then a database of 8,000 measured foods, and only
-           estimates when neither has it.</p></div></div>
-      <div class="step"><span class="ic">${ICO.check}</span><div>
-        <b>You confirm before anything is saved</b>
-        <p>Every number is editable. Correct one once and it remembers — your "dosa" becomes
-           <i>your</i> dosa.</p></div></div>
-      <div class="step"><span class="ic">${ICO.chart}</span><div>
-        <b>It measures what you can't guess</b>
-        <p>Log your weight and it works out your real maintenance calories from your own intake
-           and weight trend. No formulas.</p></div></div>
-    </section>
-
-    <section>
-      <h2>Why sign in with Google</h2>
-      <div class="note">
-        <p><b>So your log is yours.</b> Everything you record — food, weight, targets — is tied to
-          your account and shown only to you. Nobody else signed in can see it.</p>
-        <p>It also means your food list stays personal. The app learns your portions and your
-          corrections, and those shouldn't be mixed with anyone else's.</p>
-        <p>Google sign-in is used so there's no password to invent or for this app to store.
-          It reads your email, name and picture — nothing else.</p>
-      </div>
-    </section>
-
-    <section>
-      <h2>Why it asks for an API key</h2>
-      <div class="note">
-        <p><b>Reading your sentence costs money.</b> Working out what "200g chicken and two chapati"
-          contains is done by Google's Gemini, and every meal is a paid API call.</p>
-        <p>So you choose: <b>bring your own key and it's free</b>, or use the app's key, which will
-          need a subscription once that exists.</p>
-        <p>Your key is encrypted before it's stored and is never shown back — not to you, not to
-          anyone. It's used only for your own meals.</p>
-      </div>
-    </section>
-
-    <section>
-      <h2>Getting a free key — about 2 minutes</h2>
-      <ol class="keysteps">
-        <li>Open <a href="https://aistudio.google.com/apikey" target="_blank" rel="noopener">aistudio.google.com/apikey</a> and sign in with any Google account.</li>
-        <li>Click <b>Create API key</b>, then copy the long string it gives you.</li>
-        <li>Paste it here after signing in. That's it — Google's free tier covers normal daily use.</li>
-      </ol>
-    </section>
-
-    <section style="margin-bottom:0">
-      ${cta('cta2')}
-      <p class="foot">Private by default · <a href="/privacy.html">Privacy</a></p>
-    </section>
-  </div>`
+  const steps = [
+    {
+      html: `<img class="mark" src="/icon.svg" alt="">
+        <h1>Tell it what you ate.<br>It counts <em>everything</em>.</h1>
+        <p class="lead">Type a meal the way you would say it. No searching a list, no dropdowns.</p>
+        <p class="lead">An agent works out the calories and protein, and remembers your food.</p>
+        <p class="lead">Weigh in daily and it finds the calories you actually burn.</p>
+        <div class="spacer"></div>
+        <div class="cta">${nextBtn("Let's get fit")}</div>`,
+      wire: (pane, go) => (pane.querySelector('#nx').onclick = () => go(1)),
+    },
+    {
+      html: `<h1>How the agent <em>learns</em></h1>
+        <div class="flow">
+          <div class="ln"><span class="n">1</span><p>You type what you ate.<br>
+            <span><code>200g rice and 3 boiled eggs</code></span></p></div>
+          <div class="ln"><span class="n">2</span><p>The agent checks your own food list first.
+            <span>If the dish is there, the numbers come straight from it.</span></p></div>
+          <div class="ln"><span class="n">3</span><p>If it is new, Gemini reads your sentence
+            <span>and works out what is in it.</span></p></div>
+          <div class="ln"><span class="n">4</span><p>You confirm, and the dish joins your list.
+            <span>Every number stays editable.</span></p></div>
+        </div>
+        <p class="flow tail">Next time you eat it, nothing is sent anywhere. It comes from your own
+          list, with your portion. <b>That is how it learns your food.</b></p>
+        <div class="spacer"></div>
+        <div class="cta">${nextBtn('Next')}
+          <button class="skip" id="bk">Back</button></div>`,
+      wire: (pane, go) => {
+        pane.querySelector('#nx').onclick = () => go(2)
+        pane.querySelector('#bk').onclick = () => go(0)
+      },
+    },
+    {
+      html: `<h1>Your log stays <em>yours</em></h1>
+        <p class="lead">Sign in so your food list, weight and targets belong to your account.
+          Nobody else can see them.</p>
+        <p class="lead">The agent learns your portions and your corrections, so that list has to be
+          personal to you.</p>
+        <p class="lead">Google sign-in means no password to invent, and none for this agent to store.
+          It reads your name, email and picture. Nothing else.</p>
+        ${error ? `<p class="err" style="margin-top:14px">${esc(error)}</p>` : ''}
+        <div class="spacer"></div>
+        <div class="cta">
+          <a class="gsi" href="/api/auth/start">${GOOGLE_SVG}Continue with Google</a>
+          <button class="skip" id="bk">Back</button>
+          <p class="foot"><a href="/privacy.html">Privacy</a></p></div>`,
+      wire: (pane, go) => (pane.querySelector('#bk').onclick = () => go(1)),
+    },
+  ]
+  wizard(steps, error ? 2 : 0)
 }
 
 function planScreen(user, note) {
-  screen(`<h2>Choose how you pay for the AI</h2>
-    <p>Every meal you log asks Gemini to work out the nutrition. That costs someone an API call.</p>
-    ${note ? `<p class="err" style="margin-bottom:12px">${esc(note)}</p>` : ''}
-    <div class="plan ${user.plan === 'byok' ? 'sel' : ''}" data-plan="byok"><span class="tag">free</span><h4>Use my own key</h4>
-      <p>Paste a free Gemini API key from Google AI Studio. Your quota, your key, no charge.</p>
-      <input id="gkey" type="password" placeholder="${user.hasKey ? 'key saved — paste a new one to replace' : 'AQ.… or AIzaSy…'}" autocomplete="off"></div>
-    <div class="plan ${user.plan === 'hosted' ? 'sel' : ''}" data-plan="hosted"><span class="tag">subscription</span><h4>Use the app's key</h4>
-      <p>Nothing to set up. This will need a paid subscription — for now it works while that is being built.</p></div>
-    <button class="b go" id="savePlan" style="width:100%;margin-top:6px">continue</button>
-    <p style="margin-top:14px"><a href="/" style="color:var(--faint);font-size:12.5px">back</a> · <a href="/api/auth/logout" style="color:var(--faint);font-size:12.5px">sign out</a></p>`)
-  let chosen = user.plan || 'byok'
-  const paint = () => document.querySelectorAll('.plan').forEach((x) => x.classList.toggle('sel', x.dataset.plan === chosen))
-  document.querySelectorAll('.plan').forEach((x) => (x.onclick = () => { chosen = x.dataset.plan; paint() }))
-  document.getElementById('savePlan').onclick = async () => {
-    const btn = document.getElementById('savePlan'); btn.disabled = true
+  const save = async (plan, key, btn) => {
+    btn.disabled = true
     const r = await fetch('/api/auth/plan', { method: 'POST', headers: { 'content-type': 'application/json' },
-      body: JSON.stringify({ plan: chosen, gemini_key: document.getElementById('gkey')?.value.trim() }) })
+      body: JSON.stringify({ plan, gemini_key: key }) })
     const out = await r.json()
-    if (out.ok) location.href = '/'; else { btn.disabled = false; planScreen(user, out.error) }
+    if (out.ok) location.href = '/'
+    else { btn.disabled = false; planScreen(user, out.error) }
   }
+  const steps = [
+    {
+      html: `<h1>One thing left: <em>a key</em></h1>
+        <p class="lead">Reading your meals is done by Google's Gemini. An API key is simply a
+          password that lets this agent ask Gemini on your behalf.</p>
+        <p class="lead">Every new dish costs one call. Paid for by somebody.</p>
+        <p class="lead">We would rather this agent stayed free. So bring your own key, and it is.
+          Creating one takes two minutes and costs nothing.</p>
+        <div class="spacer"></div>
+        <div class="cta">${nextBtn('Get my free key')}
+          <button class="skip" id="hosted">Use the agent's key instead</button></div>`,
+      wire: (pane, go) => {
+        pane.querySelector('#nx').onclick = () => go(1)
+        pane.querySelector('#hosted').onclick = (e) => save('hosted', '', e.target)
+      },
+    },
+    {
+      html: `<h1>Paste your key</h1>
+        <ol class="keysteps">
+          <li>Open <a href="https://aistudio.google.com/apikey" target="_blank" rel="noopener">aistudio.google.com/apikey</a> and sign in with any Google account.</li>
+          <li>Click <b>Create API key</b>, then copy the long string.</li>
+          <li>Paste it below. Google's free tier covers normal daily use.</li>
+        </ol>
+        <input id="gkey" type="password" autocomplete="off" style="margin-top:16px" placeholder="${user.hasKey ? 'key saved, paste a new one to replace' : 'AIzaSy…'}">
+        <p class="foot" style="text-align:left;margin-top:10px">Your key is encrypted before it is stored
+          and never shown back, to you or anyone.</p>
+        ${note ? `<p class="err" style="margin-top:12px">${esc(note)}</p>` : ''}
+        <div class="spacer"></div>
+        <div class="cta">${nextBtn('Start tracking', 'go')}
+          <button class="skip" id="bk">Back</button></div>`,
+      wire: (pane, go) => {
+        const key = pane.querySelector('#gkey')
+        pane.querySelector('#go').onclick = (e) => save('byok', key.value.trim(), e.target)
+        key.addEventListener('keydown', (e) => { if (e.key === 'Enter') pane.querySelector('#go').click() })
+        pane.querySelector('#bk').onclick = () => go(0)
+      },
+    },
+  ]
+  wizard(steps, note ? 1 : 0)
 }
 function passcodeScreen(message) {
   screen(`<h2>Calorie Counter</h2><p>${esc(message || 'enter the passcode')}</p>
