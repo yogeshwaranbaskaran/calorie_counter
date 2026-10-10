@@ -14,7 +14,8 @@ const ENDPOINT = 'https://generativelanguage.googleapis.com/v1beta/models'
 const TOOL_ROLE = 'user'
 
 function toGemini(messages) {
-  return messages.map((m) => {
+  // A turn that would carry no parts at all is not a turn Gemini will accept.
+  return messages.filter((m) => m.role !== 'model' || m._raw?.length || m.text || m.calls?.length).map((m) => {
     if (m.role === 'user') return { role: 'user', parts: [{ text: m.text }] }
 
     if (m.role === 'model') {

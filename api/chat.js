@@ -33,12 +33,17 @@ export default async function handler(req, res) {
       if (!proposal.error) {
         return send(res, 200, {
           reply: '', proposal, calls: ['from your food table'], fast: true,
-          history: [...messages, { role: 'model', text: '', calls: [] }],
+          // No model turn here on purpose: it would have no parts, and a
+          // request ending on a model turn is a 400 from Gemini.
+          history: messages,
         })
       }
     }
   }
-  const history = messages.slice(-40) // keep the context window bounded
+  let history = messages.slice(-40) // keep the context window bounded
+  // Gemini: "Requests ending with a model turn are not supported." Older
+  // clients still hold a transcript that ends that way, so trim it here.
+  while (history.length && history.at(-1).role === 'model') history.pop()
 
   // The web confirm gate: log_meal cannot write. It parks a proposal, the loop
   // reports it, and the UI shows buttons. Committing is a separate request.
@@ -52,28 +57,54 @@ export default async function handler(req, res) {
     },
   })
 
+  const calls = []
+  const run = (msgs) => runTurn({
+    history: msgs, tools, forDate,
+    userId: who.userId,
+    apiKey: key,
+    onToolCall: (c) => calls.push(c.name),
+    stop: () => pending !== null,
+  })
+
+  let reply
   try {
-    const calls = []
-    const reply = await runTurn({
-      history, tools, forDate,
-      userId: who.userId,
-      apiKey: key,
-      onToolCall: (c) => calls.push(c.name),
-      stop: () => pending !== null,
-    })
-    // `unpaid` rides along so the UI can show the subscription notice without
-    // a second request, and without blocking the meal that just worked.
-    return send(res, 200, { reply, proposal: pending, calls, history, plan, unpaid })
+    reply = await run(history)
   } catch (err) {
-    const message = {
-      rate_limit: "Gemini's free tier is rate limited - wait a few seconds and say that again.",
-      bad_key: 'The Gemini API key is missing or wrong.',
-      bad_request: 'Gemini rejected the request. Check the server logs.',
-    }[err.code] ?? 'Something broke upstream. Try again.'
-    // The proposal survives the error: if log_meal already ran, the user can
-    // still confirm it rather than retyping the whole meal.
-    return send(res, err.code === 'rate_limit' ? 429 : 500, {
-      error: message, code: err.code ?? 'unknown', proposal: pending, history,
-    })
+    // A 400 that is NOT about the key means Gemini refused the conversation,
+    // not the credentials. The history lives in the browser and there is no
+    // way for the user to clear it, so without this every later message fails
+    // the same way for ever. Throw the history away and retry with nothing but
+    // what they just said.
+    if (err.code !== 'bad_request' || !said) return fail(res, err, who, pending, history)
+    console.error(`chat: bad_request for user ${who.userId} - ${err.message}`)
+    pending = null
+    calls.length = 0
+    history = [{ role: 'user', text: said }]
+    try {
+      reply = await run(history)
+      console.warn(`chat: user ${who.userId} recovered after dropping ${messages.length} turns`)
+    } catch (again) {
+      return fail(res, again, who, pending, history)
+    }
   }
+  // `unpaid` rides along so the UI can show the subscription notice without
+  // a second request, and without blocking the meal that just worked.
+  return send(res, 200, { reply, proposal: pending, calls, history, plan, unpaid })
+}
+
+// Every upstream failure records the real reason before it is turned into a
+// sentence. What the user sees must never be the only account of what broke -
+// that is how "check the server logs" came to point at an empty log.
+function fail(res, err, who, pending, history) {
+  console.error(`chat: ${err.code ?? 'unknown'} for user ${who.userId} - ${err.message}`)
+  const message = {
+    rate_limit: "Gemini's free tier is rate limited - wait a few seconds and say that again.",
+    bad_key: 'The Gemini API key is missing or wrong.',
+    bad_request: 'Gemini could not read that one. Try saying it in fewer words.',
+  }[err.code] ?? 'Something broke upstream. Try again.'
+  // The proposal survives the error: if log_meal already ran, the user can
+  // still confirm it rather than retyping the whole meal.
+  return send(res, err.code === 'rate_limit' ? 429 : 500, {
+    error: message, code: err.code ?? 'unknown', proposal: pending, history,
+  })
 }
