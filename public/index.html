@@ -680,10 +680,10 @@ async function loadDay() {
   return cache.days.get(logDate)
 }
 async function loadRange(days = 7) {
-  if (cache.range?.n !== days) cache.range = { n: days, p: api(`/api/range?days=${days}`) }
+  if (cache.range?.n !== days) cache.range = { n: days, p: api(`/api/range?days=${days}&to=${isoToday()}`) }
   return cache.range.p
 }
-async function loadBody() { return (cache.body ??= await api('/api/body')) }
+async function loadBody() { return (cache.body ??= await api(`/api/body?today=${isoToday()}`)) }
 
 async function viewLog() {
   const d = await loadDay()
@@ -958,9 +958,15 @@ async function viewBody() {
 
   const dir = (v) => v == null ? '·' : `${v > 0 ? '+' : ''}${v} kg`
   const cls = (v) => v == null ? '' : v < 0 ? 'down' : v > 0 ? 'up' : ''
-  view.appendChild(el('card', `<h3>weight<span class="r">7-day average</span></h3>
+  // The reading you just typed leads, because that is the number you came to
+  // check. "now" used to sit over the 7-day average, so saving 77.5 and being
+  // shown 77.25 read as the save having failed.
+  const fresh = b.latest.date === isoToday()
+  view.appendChild(el('card', `<h3>weight<span class="r">${fresh ? 'today' : prettyDate(b.latest.date)}</span></h3>
+    <div class="bignum"><b>${b.latest.kg}</b><span>kg${fresh ? ' today' : ' on ' + shortDate(b.latest.date)}</span>
+      <span class="delta">7-day average ${b.latest.avg}</span></div>
     <div class="stat3">
-      <div><b>${b.latest.avg}</b><small>now</small></div>
+      <div><b>${b.latest.avg}</b><small>7-day avg</small></div>
       <div><b class="${cls(b.change_7d)}">${dir(b.change_7d)}</b><small>7 days</small></div>
       <div><b class="${cls(b.change_30d)}">${dir(b.change_30d)}</b><small>30 days</small></div>
     </div>

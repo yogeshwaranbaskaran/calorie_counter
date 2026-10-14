@@ -14,11 +14,23 @@ const KCAL_PER_KG = 7700
 // trend instead of a formula. Because the intake side is LOGGED intake, the
 // result is maintenance in the app's own units - which is exactly what a
 // target set in the app should be compared against.
+// The user's calendar day, not the server's. A phone in Japan is a day ahead
+// of a UTC server for nine hours every morning, which is exactly when someone
+// weighs themselves - and a window bounded by the server's date threw that
+// reading away, along with the day's food. No timezone is more than one day
+// off UTC, so anything further than that is a wrong clock and gets ignored.
+function userToday(req) {
+  const asked = new URL(req.url, 'http://x').searchParams.get('today')
+  const server = localDate()
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(asked ?? '')) return server
+  return asked > shiftDate(server, 1) || asked < shiftDate(server, -1) ? server : asked
+}
+
 export default async function handler(req, res) {
   const who = await requireUser(req, res)
   if (!who) return
   try {
-    const today = localDate()
+    const today = userToday(req)
     const from = shiftDate(today, -89)
     const [weights, log, targets] = await Promise.all([
       getWeights(who.userId, from, today),
