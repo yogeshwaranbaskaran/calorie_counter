@@ -860,10 +860,36 @@ async function send() {
       : `Gemini is slow right now… ${secs}s`
   }, 1000)
   const stop = () => { clearInterval(tick); thinking.remove(); chat.splice(chat.indexOf(thinking), 1) }
+
+  // A food the table has never seen costs three Gemini round trips, measured
+  // at ~22s, and the first log of the day waits for the host to wake on top of
+  // that. A request that long does not reliably survive a phone locking its
+  // screen or handing over from wifi to mobile - and every one of those
+  // arrived here as a flat "network problem", which blamed the server for a
+  // dropped radio. So retry, and say which it was.
+  // Retrying is safe: log_meal only PARKS a proposal (committing is a separate
+  // request) and save_food upserts on (user_id, name), so nothing is written
+  // twice no matter how far the first attempt got.
+  const body = JSON.stringify({ messages: history, date: logDate })
+  const post = async (attempt = 0) => {
+    try {
+      return await fetch('/api/chat', { method: 'POST', headers: headers(), body })
+    } catch (err) {
+      if (attempt >= CHAT_RETRIES.length) throw err
+      clearInterval(tick)
+      thinking.textContent = `connection dropped, retrying in ${CHAT_RETRIES[attempt] / 1000}s…`
+      await new Promise((r) => setTimeout(r, CHAT_RETRIES[attempt]))
+      thinking.textContent = 'retrying…'
+      return post(attempt + 1)
+    }
+  }
+
   try {
-    const res = await fetch('/api/chat', { method: 'POST', headers: headers(), body: JSON.stringify({ messages: history, date: logDate }) })
+    const res = await post()
     if (res.status === 401) return gate('wrong passcode')
-    const out = await res.json()
+    // A 502 from the host is an HTML error page, not JSON. Reading it as JSON
+    // threw and landed in the same catch, so an outage also read as "network".
+    const out = await res.json().catch(() => ({ error: `the server answered ${res.status} but not with JSON` }))
     stop()
     if (out.history) history = out.history
     if (out.needsKey) { bubble('err', out.error); return planScreen(me.user, out.error) }
@@ -871,7 +897,15 @@ async function send() {
     if (out.calls?.length) bubble('tools', out.fast ? 'from your food table · instant' : out.calls.join(' → '))
     if (out.reply) bubble('msg bot', out.reply)
     if (out.proposal) proposalCard(out.proposal)
-  } catch { stop(); bubble('err', 'network problem') }
+  } catch (err) {
+    stop()
+    // navigator.onLine is only reliable when it says false, which is exactly
+    // the case worth distinguishing: the phone knows it lost the network.
+    bubble('err', navigator.onLine === false
+      ? 'You are offline. Your message is still in the box above - send it again when you have signal.'
+      : `Could not reach the server after ${CHAT_RETRIES.length + 1} tries. Nothing was logged, so just send it again.`)
+    console.error('chat send failed:', err)
+  }
 }
 
 /* =============================================================== trends */
@@ -1126,6 +1160,9 @@ const VIEWS = { log: viewLog, trends: viewTrends, body: viewBody, insights: view
 // outage, so a network failure retries a few times with a visible countdown
 // before it is reported as a problem.
 const RETRY_DELAYS = [3000, 6000, 12000]
+// Shorter than RETRY_DELAYS: the user is sitting there watching a counter, and
+// the request they are retrying already took twenty seconds.
+const CHAT_RETRIES = [2000, 5000]
 async function render(attempt = 0) {
   try { await VIEWS[tab]() }
   catch (e) {
