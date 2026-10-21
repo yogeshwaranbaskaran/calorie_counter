@@ -50,7 +50,13 @@ function toGemini(messages) {
 // because the caps add up, so the whole chain gets one budget to spend.
 const TIMEOUT_MS = Number(process.env.LLM_TIMEOUT_MS || 20_000)
 const BUDGET_MS = Number(process.env.LLM_BUDGET_MS || 45_000)
-const FALLBACKS = (process.env.GEMINI_FALLBACKS || 'gemini-3.1-flash-lite,gemini-3.5-flash-lite')
+// Order is by MEASURED latency with our real tool declarations, 3 calls each,
+// 2026-10-21: 3.5-flash-lite 737ms, 3.8-flash 5327ms, 3.7-flash 7943ms,
+// 3.1-flash-lite 10550ms. 3.1-flash-lite was first here and is the slowest of
+// the lot, so a struggling primary fell through to the worst option before the
+// best one. A fallback is a degraded mode: fastest healthy model wins, because
+// the alternative the user actually sees is a timeout.
+const FALLBACKS = (process.env.GEMINI_FALLBACKS || 'gemini-3.5-flash-lite,gemini-3.8-flash')
   .split(',').map((m) => m.trim()).filter(Boolean)
 
 export async function llm(opts) {
