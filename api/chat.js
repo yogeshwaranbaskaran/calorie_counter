@@ -57,6 +57,29 @@ export default async function handler(req, res) {
     },
   })
 
+  // Indian mobile carriers and NATs drop IDLE connections, often inside a
+  // minute, and a food the table has never seen leaves this request silent for
+  // 10-30s while the agent works. The same request, to the same server,
+  // survives on fibre in Japan and dies on mobile in India - and it dies after
+  // save_food has already run, so the user is left with a food she can see but
+  // never managed to log. A busy connection is not an idle one, so answer with
+  // headers at once and trickle a line every few seconds. The real payload is
+  // the LAST line; the client reads only that.
+  const startedAt = Date.now()
+  res.statusCode = 200
+  res.setHeader('content-type', 'application/x-ndjson')
+  res.setHeader('cache-control', 'no-store')
+  res.flushHeaders?.()
+  const beat = setInterval(() => {
+    if (!res.writableEnded) res.write(`{"wait":${Math.round((Date.now() - startedAt) / 1000)}}\n`)
+  }, Number(process.env.HEARTBEAT_MS || 5000))
+  // If she closes the app mid-request, stop writing into a dead socket.
+  res.on('close', () => clearInterval(beat))
+  const finish = (bodyObj) => {
+    clearInterval(beat)
+    if (!res.writableEnded) res.end(JSON.stringify(bodyObj) + '\n')
+  }
+
   const calls = []
   const run = (msgs) => runTurn({
     history: msgs, tools, forDate,
@@ -75,7 +98,7 @@ export default async function handler(req, res) {
     // way for the user to clear it, so without this every later message fails
     // the same way for ever. Throw the history away and retry with nothing but
     // what they just said.
-    if (err.code !== 'bad_request' || !said) return fail(res, err, who, pending, history)
+    if (err.code !== 'bad_request' || !said) return fail(finish, err, who, pending, history)
     console.error(`chat: bad_request for user ${who.userId} - ${err.message}`)
     pending = null
     calls.length = 0
@@ -84,18 +107,21 @@ export default async function handler(req, res) {
       reply = await run(history)
       console.warn(`chat: user ${who.userId} recovered after dropping ${messages.length} turns`)
     } catch (again) {
-      return fail(res, again, who, pending, history)
+      return fail(finish, again, who, pending, history)
     }
   }
   // `unpaid` rides along so the UI can show the subscription notice without
   // a second request, and without blocking the meal that just worked.
-  return send(res, 200, { reply, proposal: pending, calls, history, plan, unpaid })
+  return finish({ reply, proposal: pending, calls, history, plan, unpaid })
 }
 
 // Every upstream failure records the real reason before it is turned into a
 // sentence. What the user sees must never be the only account of what broke -
 // that is how "check the server logs" came to point at an empty log.
-function fail(res, err, who, pending, history) {
+// The status line is long gone by the time anything fails - headers went out
+// before the agent started - so an error travels in the last line with its
+// code, exactly where the client already looks for it.
+function fail(finish, err, who, pending, history) {
   console.error(`chat: ${err.code ?? 'unknown'} for user ${who.userId} - ${err.message}`)
   const message = {
     rate_limit: "Gemini's free tier is rate limited - wait a few seconds and say that again.",
@@ -104,7 +130,5 @@ function fail(res, err, who, pending, history) {
   }[err.code] ?? 'Something broke upstream. Try again.'
   // The proposal survives the error: if log_meal already ran, the user can
   // still confirm it rather than retyping the whole meal.
-  return send(res, err.code === 'rate_limit' ? 429 : 500, {
-    error: message, code: err.code ?? 'unknown', proposal: pending, history,
-  })
+  return finish({ error: message, code: err.code ?? 'unknown', proposal: pending, history })
 }

@@ -887,9 +887,17 @@ async function send() {
   try {
     const res = await post()
     if (res.status === 401) return gate('wrong passcode')
-    // A 502 from the host is an HTML error page, not JSON. Reading it as JSON
-    // threw and landed in the same catch, so an outage also read as "network".
-    const out = await res.json().catch(() => ({ error: `the server answered ${res.status} but not with JSON` }))
+    // /api/chat trickles heartbeat lines while the agent works, so that a
+    // carrier which drops idle connections never sees this one as idle. The
+    // answer is the LAST line. A plain single-line JSON body is also its own
+    // last line, so this reads both. A 502 from the host is an HTML error
+    // page, not JSON, and used to throw into the catch below - which is how an
+    // outage came to read as "network problem".
+    const text = await res.text()
+    const line = text.trimEnd().split('\n').filter(Boolean).pop()
+    let out
+    try { out = JSON.parse(line) }
+    catch { out = { error: `The server answered ${res.status} but not with data. Try again in a moment.` } }
     stop()
     if (out.history) history = out.history
     if (out.needsKey) { bubble('err', out.error); return planScreen(me.user, out.error) }
