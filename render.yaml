@@ -3,7 +3,7 @@ services:
     name: calorie_counter
     runtime: node
     plan: free
-    # Next to the Neon database (ap-southeast-1). Without this Render defaults
+    # Next to the database (ap-southeast-1). Without this Render defaults
     # to Oregon and every query crosses the Pacific.
     region: singapore
     buildCommand: npm install
@@ -17,7 +17,7 @@ services:
       - key: GEMINI_MODEL
         value: gemini-3.5-flash
       - key: DATABASE_URL
-        sync: false          # Neon pooled connection string
+        sync: false          # pooled Postgres connection string
       - key: APP_PASSCODE
         sync: false          # only used when Google sign-in is not configured
       - key: GOOGLE_CLIENT_ID
@@ -29,4 +29,4 @@ services:
       - key: OWNER_EMAIL
         sync: false          # this account adopts the pre-accounts data
       - key: API_TOKEN
-        sync: false          # bearer token for the owner's own scripts (Suno)
+        sync: false          # optional bearer token for the owner's own scripts

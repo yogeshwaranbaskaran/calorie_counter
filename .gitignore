@@ -3,3 +3,10 @@ node_modules/
 data/*.json
 !data/.gitkeep
 !data/usda.json
+
+# local tooling, not part of the project
+.mcp.json
+.claude/
+.agents/
+skills-lock.json
+screentshots for cd/
