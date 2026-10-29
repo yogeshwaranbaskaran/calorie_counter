@@ -12,6 +12,14 @@ the numbers that come out of it honest.
 
 Node 20+, one npm dependency (`pg`). No framework, no bundler, no build step.
 
+| | | |
+|---|---|---|
+| ![](docs/screenshots/00-landing.png) | ![](docs/screenshots/02-chat.png) | ![](docs/screenshots/05-insights.png) |
+| What it is, before you sign in | A food it has seen before resolves from your own table, in one call, instantly | A separate pass over the whole log, citing the days it is talking about |
+
+Every screen here is a real run. The food and weight are `npm run seed` demo
+data rather than mine; the model's replies are not staged.
+
 ## running it
 
     cp .env.example .env     # paste a Gemini API key
@@ -114,6 +122,11 @@ against targets. **Insights** reads the whole log and says what to change.
 Insights is deliberately *not* a tool loop. Two weeks of totals fit in one
 prompt, so a loop would only add round trips on a rate-limited free tier.
 Agents are a technique, not a default.
+
+| | | |
+|---|---|---|
+| ![](docs/screenshots/01-log.png) | ![](docs/screenshots/03-trends.png) | ![](docs/screenshots/04-body.png) |
+| Log | Trends | Body |
 
 ## accounts and keys
 
