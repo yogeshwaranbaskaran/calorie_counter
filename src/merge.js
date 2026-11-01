@@ -16,6 +16,11 @@
 // been using. So a user who exists in both keeps their live row (their key,
 // their targets), and a food name they have already relearned keeps the live
 // numbers. The dump only fills in what is missing.
+//
+// --map=<source id>:<target id> joins two accounts google_sub cannot: the same
+// person who signed in with a different Google account on each side. Matching
+// them on anything weaker (email, display name) automatically would be a guess,
+// so it is a decision the person running this makes by hand, per user.
 import pg from 'pg'
 import { readFile } from 'node:fs/promises'
 
@@ -24,9 +29,13 @@ const dry = process.argv.includes('--dry-run')
 const allowOverlap = process.argv.includes('--allow-overlap')
 const adoptArg = process.argv.find((a) => a.startsWith('--adopt='))
 const adopt = adoptArg ? Number(adoptArg.slice('--adopt='.length)) : null
+const manual = new Map(process.argv
+  .filter((a) => a.startsWith('--map='))
+  .map((a) => a.slice('--map='.length).split(':'))
+  .map(([from, to]) => [from, Number(to)]))
 
 if (!file || !process.env.DATABASE_URL) {
-  console.error('usage: node --env-file=.env src/merge.js <dump.json> [--dry-run] [--adopt=<target user id>] [--allow-overlap]')
+  console.error('usage: node --env-file=.env src/merge.js <dump.json> [--dry-run] [--adopt=<target user id>] [--map=<source id>:<target id>]... [--allow-overlap]')
   process.exit(1)
 }
 
@@ -69,6 +78,15 @@ try {
   const map = new Map() // source user id -> target user id
 
   for (const u of src.users ?? []) {
+    if (manual.has(String(u.id))) {
+      const to = manual.get(String(u.id))
+      const ok = await c.query('select id from users where id = $1', [to])
+      if (!ok.rows.length) throw new Error(`--map=${u.id}:${to} - user ${to} is not in the target database`)
+      map.set(String(u.id), to)
+      bump('users mapped by hand')
+      console.log(`  user ${u.id} -> ${to}  (--map, live row kept)`)
+      continue
+    }
     const found = await c.query('select id, email from users where google_sub = $1', [u.google_sub])
     if (found.rows.length) {
       map.set(String(u.id), found.rows[0].id)
