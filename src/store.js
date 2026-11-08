@@ -8,6 +8,11 @@ import { readFile, writeFile } from 'node:fs/promises'
 import { join, dirname } from 'node:path'
 import { fileURLToPath } from 'node:url'
 
+// localDate() is the server's clock, so the server must run in the user's zone.
+// Vercel reserves TZ as an env var name, so there it is set as APP_TZ and
+// applied here; Node picks up a TZ change at runtime.
+if (process.env.APP_TZ) process.env.TZ = process.env.APP_TZ
+
 const DB_URL = process.env.DATABASE_URL
 const remote = Boolean(DB_URL)
 
