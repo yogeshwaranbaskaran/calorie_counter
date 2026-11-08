@@ -15,7 +15,7 @@
   --text:#eef0f3; --muted:#8e96a1; --faint:#5d6570;
   --accent:#7dd88f; --accent2:#4fb864; --warn:#e0a35c; --danger:#e07a7a;
   /* macro series - validated for this dark surface (CVD dE 9.4, normal 20.9) */
-  --protein:#3987e5; --carbs:#d95926; --fat:#199e70;
+  --protein:#3987e5; --carbs:#d95926; --fat:#199e70; --fiber:#a77de0;
   --r:18px; --r2:12px;
 }
 *{box-sizing:border-box}
@@ -122,8 +122,11 @@ main{flex:1; overflow-y:auto; padding:4px 16px 16px; display:flex; flex-directio
 .meal h4{display:flex; align-items:center; gap:8px; font-size:13px; font-weight:600; margin-bottom:4px}
 .meal h4 svg{width:15px; height:15px; color:var(--muted)}
 .meal h4 .mk{margin-left:auto; color:var(--muted); font-weight:500; font-size:12.5px; font-variant-numeric:tabular-nums}
-.ent{display:flex; align-items:center; gap:10px; padding:6px 0 6px 23px; font-variant-numeric:tabular-nums; font-size:14.5px}
-.ent .n{flex:1; overflow:hidden; text-overflow:ellipsis; white-space:nowrap}
+.ent{display:flex; align-items:center; gap:10px; padding:7px 0 7px 23px; font-variant-numeric:tabular-nums; font-size:14.5px}
+.ent .nb{flex:1; min-width:0}
+.ent .nb .mc{margin-top:2px; font-size:11.5px}
+.ent .n{display:block; overflow:hidden; text-overflow:ellipsis; white-space:nowrap}
+.meal .mtot{padding-left:23px; margin:-2px 0 3px}
 .ent .k{color:var(--muted); font-size:13px}
 .ent .x{background:none; border:0; color:var(--faint); font-size:18px; line-height:1; padding:2px 5px; cursor:pointer}
 .ent .n{cursor:pointer}
@@ -188,6 +191,29 @@ main{flex:1; overflow-y:auto; padding:4px 16px 16px; display:flex; flex-directio
 .mealpick{display:flex; gap:6px; margin:4px 0 8px; flex-wrap:wrap}
 .mealpick button{background:var(--raised); border:1px solid var(--line); color:var(--muted); border-radius:999px; padding:4px 10px; font-size:12px; cursor:pointer}
 .mealpick button.on{border-color:var(--accent); color:var(--accent)}
+.prow .mc{margin-top:7px}
+.ptot{display:flex; align-items:baseline; flex-wrap:wrap; gap:6px 14px; border-top:1px solid var(--line); margin-top:4px; padding-top:12px}
+.ptot .gk{font-size:26px; font-weight:700; letter-spacing:-.02em; font-variant-numeric:tabular-nums; line-height:1}
+.ptot .gk small{font-size:12.5px; font-weight:500; color:var(--muted); letter-spacing:0; margin-left:5px}
+.ptot .mc{font-size:13px}
+.after{margin-top:14px; background:var(--raised); border-radius:var(--r2); padding:10px 12px 6px}
+.after h5{margin:0 0 4px; font-size:11px; font-weight:600; color:var(--faint); text-transform:uppercase; letter-spacing:.06em}
+.arow{display:flex; align-items:center; gap:10px; padding:5px 0; font-size:13px}
+.arow .al{width:52px; color:var(--muted); flex:0 0 auto}
+.arow .at{flex:1; height:8px; background:var(--line); border-radius:5px; position:relative; overflow:hidden}
+.arow .at i{position:absolute; top:0; bottom:0; display:block}
+.arow .at i.was{left:0; opacity:.45; border-radius:5px 0 0 5px}
+.arow .at i.add{transition:width .25s ease}
+.arow .at u{position:absolute; top:-3px; bottom:-3px; width:2px; background:var(--muted); text-decoration:none}
+.arow .av{width:104px; text-align:right; flex:0 0 auto; font-variant-numeric:tabular-nums; color:var(--muted)}
+.arow .av b{color:var(--text)} .arow .av b.over{color:var(--warn)}
+.arow .av small{color:var(--faint); font-size:11px}
+
+/* ---------------- macro chips ---------------- */
+.mc{display:flex; flex-wrap:wrap; gap:3px 11px; font-size:12px; color:var(--muted); font-variant-numeric:tabular-nums; line-height:1.35}
+.mc span{white-space:nowrap}
+.mc span::before{content:''; display:inline-block; width:6px; height:6px; border-radius:50%; background:var(--c); margin-right:5px; vertical-align:1px}
+.mc b{color:var(--text); font-weight:600}
 
 /* ---------------- charts ---------------- */
 svg.chart{display:block; width:100%; height:auto; overflow:visible}
@@ -508,7 +534,7 @@ const MACROS = [
   { k: 'sugar_g',   t: 'target_sugar_g',   label: 'sugar',   v: 'carbs',   kcalPerG: 4, sub: true },
   // Fibre is a carbohydrate the body barely absorbs, so it is shown but never
   // counted toward the energy split.
-  { k: 'fiber_g',   t: 'target_fiber_g',   label: 'fibre',   v: 'fat',     kcalPerG: 0, sub: true },
+  { k: 'fiber_g',   t: 'target_fiber_g',   label: 'fibre',   v: 'fiber',   kcalPerG: 0, sub: true },
 ]
 
 // Bars fill toward the TARGET when one is set, else toward the user's own
@@ -573,16 +599,34 @@ const MEAL_ICON = {
   null: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="9"/><path d="M12 8v4l3 2"/></svg>',
 }
 
+// The four numbers people actually steer by. Fibre gets its own colour.
+const CHIPS = [
+  ['protein_g', 'P', 'protein', '--protein'], ['carbs_g', 'C', 'carbs', '--carbs'],
+  ['fat_g', 'F', 'fat', '--fat'], ['fiber_g', 'Fb', 'fibre', '--fiber'],
+]
+const grams = (v) => { v = Number(v) || 0; return v && v < 10 ? Math.round(v * 10) / 10 : Math.round(v) }
+const sumMacros = (rows) => rows.reduce((t, r) => {
+  for (const k of ['kcal', 'protein_g', 'carbs_g', 'fat_g', 'fiber_g']) t[k] += Number(r[k]) || 0
+  return t
+}, { kcal: 0, protein_g: 0, carbs_g: 0, fat_g: 0, fiber_g: 0 })
+// short: "P 12g  C 30g" for item rows; long: "12g protein" for totals
+function macroChips(t, long = false) {
+  // An item row skips its zeros ("Fb 0g" on an egg is noise); totals keep them.
+  return `<div class="mc">${CHIPS.filter(([k]) => long || grams(t[k])).map(([k, s, l, c]) =>
+    `<span style="--c:var(${c})">${long ? '' : s + ' '}<b>${grams(t[k])}</b>g${long ? ' ' + l : ''}</span>`).join('')}</div>`
+}
+
 function mealGroups(rows, editable = true) {
   const groups = {}
   for (const r of rows) (groups[r.meal ?? null] ??= []).push(r)
   return MEAL_ORDER.filter((m) => groups[m]?.length).map((m) => {
     const list = groups[m]
-    const kcal = list.reduce((t, r) => t + (r.kcal || 0), 0)
+    const sum = sumMacros(list)
     return `<div class="meal">
-      <h4>${MEAL_ICON[m]}${m ? cap(m) : 'Unsorted'}<span class="mk">${kcal} kcal</span></h4>
+      <h4>${MEAL_ICON[m]}${m ? cap(m) : 'Unsorted'}<span class="mk">${Math.round(sum.kcal)} kcal</span></h4>
+      <div class="mtot">${macroChips(sum, true)}</div>
       ${list.map((r) => `<div class="ent" data-id="${r.id}">
-        <span class="n">${qtyLabel(r.qty, r.unit)} ${esc(cap(r.name))}</span>
+        <div class="nb"><span class="n">${qtyLabel(r.qty, r.unit)} ${esc(cap(r.name))}</span>${macroChips(r)}</div>
         <span class="k">${r.kcal} kcal</span>
         ${editable ? '<button class="x" title="remove">×</button>' : ''}
       </div>`).join('')}
@@ -768,7 +812,8 @@ function proposalCard(p) {
   const box = el('card', `<h3>${prettyDate(p.date)}</h3>
     <div class="mealpick">${['breakfast', 'lunch', 'dinner', 'snack'].map((m) => `<button data-m="${m}" class="${m === meal ? 'on' : ''}">${cap(m)}</button>`).join('')}</div>
     <div class="plist"></div>
-    <div class="row tot"><span>total</span><span class="grand"></span></div>
+    <div class="ptot"><span class="gk"></span><span class="gm"></span></div>
+    <div class="after"><h5>${p.date === isoToday() ? 'today' : shortDate(p.date)} after logging</h5><div class="arows"><p class="hint">loading the day…</p></div></div>
     <div class="edited" hidden></div>
     <div class="acts"><button class="b" data-a="no">cancel</button><button class="b go" data-a="yes">log it</button></div>`)
   box.querySelectorAll('.mealpick button').forEach((b) => (b.onclick = () => {
@@ -776,15 +821,57 @@ function proposalCard(p) {
     box.querySelectorAll('.mealpick button').forEach((x) => x.classList.toggle('on', x === b))
   }))
 
-  const list = box.querySelector('.plist'), grand = box.querySelector('.grand'), editedNote = box.querySelector('.edited')
+  // What one row adds right now. A typed kcal is a correction the server will
+  // apply by scaling carbs and fat with it (protein only if not typed itself,
+  // fibre never), so the preview scales the same way.
+  const rowMacros = (r) => {
+    const f = r.qty / (r.basis || 1)
+    const ratio = r.orig_kcal ? r.kcal_per_unit / r.orig_kcal : 1
+    return {
+      kcal: Math.round(r.kcal_per_unit * f),
+      protein_g: (r.proteinEdited ? r.protein_per_unit : r.protein_per_unit * ratio) * f,
+      carbs_g: r.carbs_per_unit * ratio * f,
+      fat_g: r.fat_per_unit * ratio * f,
+      fiber_g: r.fiber_per_unit * f,
+    }
+  }
+
+  // The day this meal lands on, so the card can show where it leaves you.
+  let day = null
+  ;(p.date === logDate ? loadDay() : api(`/api/day?date=${p.date}`))
+    .then((d) => { day = d; paint() })
+    .catch(() => { box.querySelector('.after').hidden = true })
+
+  const AFTER = [
+    { k: 'kcal', t: 'target_kcal', label: 'kcal', c: 'var(--accent)', unit: '', warn: true },
+    { k: 'protein_g', t: 'target_protein_g', label: 'protein', c: 'var(--protein)', unit: 'g' },
+    { k: 'carbs_g', t: 'target_carbs_g', label: 'carbs', c: 'var(--carbs)', unit: 'g', warn: true },
+    { k: 'fat_g', t: 'target_fat_g', label: 'fat', c: 'var(--fat)', unit: 'g', warn: true },
+    { k: 'fiber_g', t: 'target_fiber_g', label: 'fibre', c: 'var(--fiber)', unit: 'g' },
+  ]
+  const afterRows = (add) => AFTER.map((m) => {
+    const was = Number(day.totals?.[m.k]) || 0, now = was + (add[m.k] || 0)
+    const target = Number(day.targets?.[m.t]) || 0
+    const top = Math.max(target * 1.15, now * 1.05, 1)
+    const over = m.warn && target && now > target * 1.05
+    return `<div class="arow">
+      <span class="al">${m.label}</span>
+      <span class="at">
+        <i class="was" style="width:${was / top * 100}%;background:${m.c}"></i>
+        <i class="add" style="left:${was / top * 100}%;width:${(now - was) / top * 100}%;background:${over ? 'var(--warn)' : m.c}"></i>
+        ${target ? `<u style="left:${Math.min(99, target / top * 100)}%"></u>` : ''}
+      </span>
+      <span class="av">${grams(was)} → <b class="${over ? 'over' : ''}">${grams(now)}</b>${target ? `<small>/${Math.round(target)}${m.unit}</small>` : m.unit}</span>
+    </div>`
+  }).join('')
+
+  const list = box.querySelector('.plist'), editedNote = box.querySelector('.edited')
   const paint = () => {
     const live = rows.filter((r) => !r.dropped)
-    const kcal = live.reduce((t, r) => t + Math.round(r.kcal_per_unit * r.qty / (r.basis || 1)), 0)
-    const protein = Math.round(live.reduce((t, r) => {
-      const ratio = r.proteinEdited ? 1 : (r.orig_kcal ? r.kcal_per_unit / r.orig_kcal : 1)
-      return t + r.protein_per_unit * ratio * r.qty / (r.basis || 1)
-    }, 0) * 10) / 10
-    grand.textContent = `${kcal} kcal · ${protein}g protein`
+    const sum = sumMacros(live.map(rowMacros))
+    box.querySelector('.gk').innerHTML = `${Math.round(sum.kcal)}<small>kcal this meal</small>`
+    box.querySelector('.gm').innerHTML = macroChips(sum, true)
+    if (day) box.querySelector('.arows').innerHTML = afterRows(sum)
     box.querySelector('[data-a=yes]').disabled = live.length === 0
     const changed = rows.filter((r) => !r.dropped && (Math.abs(r.kcal_per_unit - r.orig_kcal) >= 0.5 || r.proteinEdited))
     editedNote.hidden = !changed.length
@@ -794,6 +881,7 @@ function proposalCard(p) {
     r.orig_kcal = r.kcal_per_unit
     r.orig_protein = r.protein_per_unit ?? 0
     r.protein_per_unit = r.protein_per_unit ?? (r.qty ? (r.protein_g * (r.basis || 1)) / r.qty : 0)
+    for (const m of ['carbs', 'fat', 'fiber']) r[`${m}_per_unit`] ??= r.qty ? ((r[`${m}_g`] || 0) * (r.basis || 1)) / r.qty : 0
     const line = el('prow', `<span class="pn">${esc(cap(r.name))}</span>
       <div class="pctl">
         <input class="q" type="number" inputmode="decimal" min="0" step="0.5" value="${r.qty}">
@@ -804,9 +892,15 @@ function proposalCard(p) {
         <span class="unit">P${r.basis > 1 ? '/100' + esc(r.unit) : ''}</span>
         <span class="sub"></span>
         <button class="drop" title="remove">×</button>
-      </div>`)
-    const sub = line.querySelector('.sub')
-    const redraw = () => { sub.textContent = `${Math.round(r.kcal_per_unit * r.qty / (r.basis || 1))} kcal`; paint() }
+      </div>
+      <div class="pm"></div>`)
+    const sub = line.querySelector('.sub'), pm = line.querySelector('.pm')
+    const redraw = () => {
+      const m = rowMacros(r)
+      sub.textContent = `${m.kcal} kcal`
+      pm.innerHTML = macroChips(m)
+      paint()
+    }
     line.querySelector('.q').addEventListener('input', (e) => { const v = parseFloat(e.target.value); r.qty = Number.isFinite(v) && v >= 0 ? v : 0; redraw() })
     line.querySelector('.k').addEventListener('input', (e) => { const v = parseFloat(e.target.value); r.kcal_per_unit = Number.isFinite(v) && v >= 0 ? v : 0; redraw() })
     line.querySelector('.p').addEventListener('input', (e) => { const v = parseFloat(e.target.value); r.protein_per_unit = Number.isFinite(v) && v >= 0 ? v : 0; r.proteinEdited = true; redraw() })
@@ -828,7 +922,8 @@ function proposalCard(p) {
     const out = await api('/api/commit', { method: 'POST', body: JSON.stringify({ date: p.date, meal, items }) })
     box.querySelector('.acts')?.remove()
     if (out.written) {
-      bubble('tools', `logged · ${out.totals.kcal} kcal${meal ? ` · ${meal}` : ''}`)
+      const t = out.totals
+      bubble('tools', `logged · ${t.kcal} kcal · P ${grams(t.protein_g)}g · C ${grams(t.carbs_g)}g · Fb ${grams(t.fiber_g)}g${meal ? ` · ${meal}` : ''}`)
       const edits = (out.corrected ?? []).map((c) =>
         `${c.name} is ${c.to} kcal` + (c.protein_to != null ? ` and ${c.protein_to}g protein` : '') + ` per unit, not ${c.from}` + (c.protein_from != null ? `/${c.protein_from}g` : ''))
       history.push({ role: 'user', text: `(I confirmed and logged: ${items.map((i) => `${i.qty} x ${i.name}`).join(', ')}` + (edits.length ? `. Remember: ${edits.join('; ')}` : '') + ')' })

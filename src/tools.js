@@ -172,6 +172,9 @@ const scale = (food, qty) => {
     // them and recompute live, without a round trip
     kcal_per_unit: food.kcal,
     protein_per_unit: food.protein_g,
+    carbs_per_unit: food.carbs_g,
+    fat_per_unit: food.fat_g,
+    fiber_per_unit: food.fiber_g ?? 0,
     basis,
     grams: round((basis === 1 ? food.grams_per_unit * qty : qty)),
     kcal: Math.round(food.kcal * f),
