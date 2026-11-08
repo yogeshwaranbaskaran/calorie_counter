@@ -35,7 +35,8 @@ export async function computeRange(userId, { to, days, from } = {}) {
     const day = byDate[r.date]
     if (!day) continue
     for (const k of KEYS) day[k] = round(day[k] + (r[k] ?? 0))
-    day.items.push({ id: r.id, name: r.name, qty: r.qty, unit: r.unit, meal: r.meal, kcal: r.kcal })
+    day.items.push({ id: r.id, name: r.name, qty: r.qty, unit: r.unit, meal: r.meal, kcal: r.kcal,
+      protein_g: r.protein_g, carbs_g: r.carbs_g, fat_g: r.fat_g, fiber_g: r.fiber_g })
 
     const f = (foods[r.name] ??= { name: r.name, times: 0, kcal: 0 })
     f.times += 1

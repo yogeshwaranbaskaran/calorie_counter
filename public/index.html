@@ -3,77 +3,105 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-<meta name="theme-color" content="#0b0d10">
+<meta name="theme-color" content="#090b0f">
 <meta name="mobile-web-app-capable" content="yes">
 <link rel="manifest" href="/manifest.json">
 <link rel="icon" href="/icon.svg" type="image/svg+xml">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap">
 <title>Calorie Counter</title>
 <meta name="build" content="71b96aa">
 <style>
 :root{
-  --bg:#0b0d10; --surface:#14171c; --raised:#1b1f26; --line:#242931; --line2:#2e343d;
-  --text:#eef0f3; --muted:#8e96a1; --faint:#5d6570;
-  --accent:#7dd88f; --accent2:#4fb864; --warn:#e0a35c; --danger:#e07a7a;
+  --bg:#090b0f; --surface:#11141a; --raised:#181c24; --line:#20252f; --line2:#2a303c;
+  --text:#eef1f5; --muted:#8f98a6; --faint:#5c6573;
+  --accent:#7dd88f; --accent2:#4fb864; --warn:#e8a65e; --danger:#ef7d7d;
   /* macro series - validated for this dark surface (CVD dE 9.4, normal 20.9) */
-  --protein:#3987e5; --carbs:#d95926; --fat:#199e70; --fiber:#a77de0;
-  --r:18px; --r2:12px;
+  --protein:#3987e5; --carbs:#d95926; --fat:#199e70; --fiber:#a77de0; --sugar:#e0709a;
+  --r:20px; --r2:13px;
+  --card:linear-gradient(180deg,#13161d,#101318);
+  --shadow:inset 0 1px 0 rgba(255,255,255,.035), 0 12px 30px -20px rgba(0,0,0,.9);
+  --ease:cubic-bezier(.2,.8,.3,1);
 }
 *{box-sizing:border-box}
 html,body{height:100%}
 body{
-  margin:0; background:var(--bg); color:var(--text);
-  font:15px/1.5 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Inter,sans-serif;
+  margin:0; color:var(--text);
+  background:radial-gradient(120% 50% at 50% -8%, rgba(125,216,143,.07), transparent 62%) fixed, var(--bg);
+  font:15px/1.5 Inter,-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;
+  font-feature-settings:"cv11";
   display:flex; flex-direction:column;
   padding:env(safe-area-inset-top) env(safe-area-inset-right) 0 env(safe-area-inset-left);
   -webkit-font-smoothing:antialiased;
 }
 h1,h2,h3,h4{margin:0}
-button{font-family:inherit}
+button{font-family:inherit; -webkit-tap-highlight-color:transparent}
+/* On a laptop it is still a phone app: one readable column, centred. */
+@media (min-width:640px){ body{max-width:540px; margin:0 auto; border-left:1px solid var(--line); border-right:1px solid var(--line)} }
+:focus-visible{outline:2px solid var(--accent); outline-offset:2px}
 
 /* ---------------- top bar ---------------- */
-header{
-  display:flex; align-items:center; gap:10px; padding:12px 16px 10px; flex:0 0 auto;
-}
-header .brand{font-weight:700; font-size:16px; letter-spacing:-.01em; display:flex; align-items:center; gap:8px}
-header .brand i{width:22px; height:22px; border-radius:7px; background:linear-gradient(135deg,var(--accent),var(--accent2)); display:block}
-.acct{
-  margin-left:auto; display:flex; align-items:center; gap:7px; background:var(--surface); border:1px solid var(--line);
-  cursor:pointer; padding:4px 10px 4px 4px; color:var(--muted); font-size:12.5px; border-radius:999px;
-}
-.acct img{width:24px; height:24px; border-radius:50%}
-.acct svg{width:16px; height:16px; margin:4px}
+header{display:flex; align-items:center; gap:10px; padding:14px 16px 6px; flex:0 0 auto}
+header .ttl{min-width:0; flex:1}
+header h1{font-size:25px; font-weight:750; letter-spacing:-.035em; line-height:1.1}
+header p{margin:3px 0 0; color:var(--muted); font-size:13px}
+header p b{color:var(--accent); font-weight:600}
+.streak{display:flex; align-items:center; gap:4px; padding:6px 11px 6px 8px; border-radius:999px;
+  background:rgba(232,166,94,.11); border:1px solid rgba(232,166,94,.26); color:#f3c58f;
+  font-size:13px; font-weight:650; font-variant-numeric:tabular-nums; flex:0 0 auto}
+.streak svg{width:16px; height:16px; color:#f0a35a}
+.acct{width:38px; height:38px; border-radius:50%; padding:0; display:grid; place-items:center; flex:0 0 auto;
+  background:var(--surface); border:1px solid var(--line2); color:var(--muted); cursor:pointer; overflow:hidden}
+.acct img{width:100%; height:100%; object-fit:cover; display:block}
+.acct svg{width:18px; height:18px}
 
-#daybar{display:flex; align-items:center; gap:8px; padding:0 16px 10px; flex:0 0 auto}
-#daybar button{
-  background:var(--surface); border:1px solid var(--line); color:var(--text); cursor:pointer;
-  border-radius:10px; width:34px; height:34px; font-size:18px; line-height:1; padding:0;
-}
-#daybar button:disabled{opacity:.3; cursor:default}
-#daybar input[type=date]{
-  padding:6px 10px; font-size:14px; border-radius:10px; height:34px;
-  border:1px solid var(--line); background:var(--surface); color:var(--text);
-  font-family:inherit; color-scheme:dark;
-}
-#daytag{font-size:12.5px; color:var(--muted); margin-left:auto; text-align:right; line-height:1.25}
-#daytag b{display:block; color:var(--text); font-weight:600}
-#daybar.past input[type=date]{border-color:var(--accent); color:var(--accent)}
+/* ---------------- week strip ---------------- */
+#daybar{display:flex; align-items:center; gap:6px; padding:4px 12px 10px; flex:0 0 auto}
+.week{flex:1; display:grid; grid-template-columns:repeat(7,1fr); gap:2px; min-width:0}
+.wd{background:none; border:0; padding:6px 0 7px; border-radius:14px; cursor:pointer; color:var(--faint);
+  display:flex; flex-direction:column; align-items:center; gap:4px; transition:background .2s}
+.wd .dl{font-size:11px; font-weight:600}
+.wd .dn{position:relative; width:34px; height:34px; display:grid; place-items:center;
+  font-size:13.5px; font-weight:650; color:var(--muted); font-variant-numeric:tabular-nums}
+.wd svg{position:absolute; inset:0; width:100%; height:100%; transform:rotate(-90deg)}
+.wd circle{fill:none; stroke-width:3; stroke-linecap:round}
+.wd .tr{stroke:var(--line2)}
+.wd .pg{stroke:var(--accent); transition:stroke-dashoffset .5s var(--ease)}
+.wd .pg.over{stroke:var(--warn)}
+.wd.logged .dn{color:var(--text)}
+.wd.today .dl{color:var(--text)}
+.wd.on{background:var(--raised); box-shadow:inset 0 0 0 1px var(--line2)}
+.wd.on .dl{color:var(--accent)}
+.wd.on .dn{color:var(--text)}
+.cal{flex:0 0 auto; width:38px; height:38px; border-radius:12px; border:1px solid var(--line2); background:var(--surface);
+  color:var(--muted); display:grid; place-items:center; position:relative; overflow:hidden}
+.cal svg{width:18px; height:18px}
+.cal.past{color:var(--accent); border-color:rgba(125,216,143,.45)}
+/* The real date input lies over the button, invisible: tapping it opens the
+   phone's own picker, and a desktop click calls showPicker(). */
+.cal input{position:absolute; inset:0; width:100%; height:100%; opacity:0; cursor:pointer; color-scheme:dark; border:0; padding:0}
 
-main{flex:1; overflow-y:auto; padding:4px 16px 16px; display:flex; flex-direction:column; gap:14px; min-height:0}
+main{flex:1; overflow-y:auto; padding:4px 16px 20px; display:flex; flex-direction:column; gap:12px; min-height:0}
+/* A screen assembles rather than appearing all at once. */
+main > *{animation:lift .4s var(--ease) both}
+main > *:nth-child(2){animation-delay:.04s} main > *:nth-child(3){animation-delay:.08s}
+main > *:nth-child(4){animation-delay:.12s} main > *:nth-child(5){animation-delay:.16s}
+main > *:nth-child(6){animation-delay:.2s}
+@media (prefers-reduced-motion:reduce){ main > *{animation:none} }
 
 /* ---------------- cards ---------------- */
-.card{background:var(--surface); border:1px solid var(--line); border-radius:var(--r); padding:16px}
+.card{background:var(--card); border:1px solid var(--line); border-radius:var(--r); padding:16px; box-shadow:var(--shadow)}
 .card.hero{
-  background:linear-gradient(160deg,#171c22 0%, #12151a 60%, #0f1216 100%);
+  background:radial-gradient(110% 80% at 0% 0%, rgba(125,216,143,.10), transparent 55%), linear-gradient(180deg,#141822,#0f1217);
   border-color:var(--line2);
 }
-.card > h3, .lbl{
-  font-size:11px; color:var(--faint); font-weight:700; letter-spacing:.08em; text-transform:uppercase; margin-bottom:12px;
-}
-/* flex, not float: two right-hand items used to land on top of each other */
-.card > h3{display:flex; align-items:baseline; gap:10px}
-.card > h3 .r{margin-left:auto; color:var(--faint); font-weight:500; letter-spacing:0; text-transform:none; font-size:12px}
+.card > h3{display:flex; align-items:baseline; gap:10px; font-size:15px; font-weight:650; letter-spacing:-.01em; margin-bottom:12px}
+.card > h3 .r{margin-left:auto; color:var(--faint); font-weight:500; font-size:12.5px; letter-spacing:0}
+.lbl{font-size:11px; color:var(--faint); font-weight:700; letter-spacing:.08em; text-transform:uppercase; margin-bottom:10px}
 .hint{color:var(--muted); font-size:13.5px; margin:0}
-.row{display:flex; justify-content:space-between; gap:12px; padding:6px 0; font-variant-numeric:tabular-nums}
+.row{display:flex; justify-content:space-between; gap:12px; padding:7px 0; font-variant-numeric:tabular-nums; border-bottom:1px solid var(--line)}
+.row:last-child{border-bottom:0}
 .row span:last-child{color:var(--muted); white-space:nowrap; font-size:13px}
 .tot{border-top:1px solid var(--line); margin-top:8px; padding-top:10px; font-weight:600}
 .tot span:last-child{color:var(--text)}
@@ -81,31 +109,52 @@ main{flex:1; overflow-y:auto; padding:4px 16px 16px; display:flex; flex-directio
 .b{
   flex:1; padding:12px; border-radius:var(--r2); border:1px solid var(--line2);
   background:var(--raised); color:var(--text); font-size:15px; font-weight:600; cursor:pointer;
+  transition:transform .12s, opacity .2s;
 }
-.b.go{background:var(--accent); color:#0b0d10; border-color:var(--accent)}
+.b:active{transform:scale(.98)}
+.b.go{background:linear-gradient(180deg,#8be39c,#6dcd80); color:#06120a; border-color:transparent;
+  box-shadow:0 8px 22px -12px rgba(125,216,143,.75)}
 .b:disabled{opacity:.4}
 .pills{display:flex; gap:6px; flex-wrap:wrap; margin-bottom:12px}
 .pills button{
   background:var(--raised); border:1px solid var(--line); color:var(--muted);
-  border-radius:999px; padding:6px 12px; font-size:12.5px; cursor:pointer;
+  border-radius:999px; padding:6px 12px; font-size:12.5px; font-weight:550; cursor:pointer; transition:all .2s;
 }
-.pills button.on{background:var(--accent); border-color:var(--accent); color:#0b0d10; font-weight:600}
+.pills button.on{background:var(--accent); border-color:var(--accent); color:#06120a; font-weight:650}
 
-/* ---------------- ring hero ---------------- */
-.ringwrap{display:flex; align-items:center; gap:18px}
-.ring{position:relative; width:138px; height:138px; flex:0 0 auto}
-.ring svg{width:100%; height:100%; transform:rotate(-90deg)}
-.ring circle{fill:none; stroke-width:10; stroke-linecap:round}
-.ring .track{stroke:var(--raised)}
-.ring .fill{stroke:var(--accent); transition:stroke-dasharray .6s ease}
-.ring .fill.over{stroke:var(--warn)}
-.ring .c{position:absolute; inset:0; display:flex; flex-direction:column; align-items:center; justify-content:center; line-height:1.1}
-.ring .c b{font-size:30px; font-variant-numeric:tabular-nums; letter-spacing:-.02em}
-.ring .c small{font-size:11px; color:var(--muted); margin-top:3px}
-.ringside{flex:1; min-width:0}
-.ringside .kv{display:flex; justify-content:space-between; font-size:13px; color:var(--muted); padding:5px 0; border-bottom:1px solid var(--line)}
-.ringside .kv:last-child{border-bottom:0}
-.ringside .kv b{color:var(--text); font-variant-numeric:tabular-nums}
+/* ---------------- hero: rings ---------------- */
+@keyframes draw{from{stroke-dashoffset:var(--len)}}
+.htop{display:flex; align-items:center; gap:20px}
+.ring{position:relative; width:148px; height:148px; flex:0 0 auto}
+.ring svg{width:100%; height:100%; transform:rotate(-90deg); overflow:visible}
+.ring circle{fill:none; stroke-width:12; stroke-linecap:round}
+.ring .track{stroke:rgba(255,255,255,.06)}
+.ring .fill{stroke:url(#kg); animation:draw 1s var(--ease) both; filter:drop-shadow(0 0 6px rgba(125,216,143,.35))}
+.ring .fill.over{stroke:var(--warn); filter:none}
+.ring .c{position:absolute; inset:0; display:flex; flex-direction:column; align-items:center; justify-content:center; line-height:1.05}
+.ring .c b{font-size:33px; font-weight:780; letter-spacing:-.045em; font-variant-numeric:tabular-nums}
+.ring .c small{font-size:11.5px; color:var(--muted); margin-top:5px; font-weight:500}
+.hstats{flex:1; min-width:0; display:flex; flex-direction:column; gap:11px}
+.hstats > div{display:flex; flex-direction:column; gap:1px}
+.hstats small{font-size:11.5px; color:var(--muted); font-weight:500}
+.hstats b{font-size:19px; font-weight:700; letter-spacing:-.025em; font-variant-numeric:tabular-nums; white-space:nowrap}
+.hstats b em{font-style:normal; font-size:12px; color:var(--faint); font-weight:500; margin-left:3px; letter-spacing:0}
+.hstats b.ok{color:var(--accent)}
+.hstats a{color:var(--accent); font-size:14px; text-decoration:none}
+.minis{display:grid; grid-template-columns:repeat(5,1fr); gap:4px; margin-top:16px; padding-top:16px; border-top:1px solid var(--line)}
+.mini{display:flex; flex-direction:column; align-items:center; text-align:center; min-width:0}
+.mini .mr{position:relative; width:50px; height:50px}
+.mini svg{width:100%; height:100%; transform:rotate(-90deg)}
+.mini circle{fill:none; stroke-width:5; stroke-linecap:round}
+.mini .track{stroke:rgba(255,255,255,.06)}
+.mini .fill{animation:draw 1s var(--ease) .12s both}
+.mini .v{position:absolute; inset:0; display:grid; place-items:center; font-size:13px; font-weight:700;
+  font-variant-numeric:tabular-nums; letter-spacing:-.02em}
+.mini .l{margin-top:6px; font-size:11.5px; font-weight:600}
+.mini .t{font-size:10.5px; color:var(--faint); font-variant-numeric:tabular-nums}
+.mini.over .v{color:var(--warn)}
+.mini.hit .v{color:var(--accent)}
+@media (prefers-reduced-motion:reduce){ .ring .fill,.mini .fill{animation:none} }
 
 /* ---------------- macro bars ---------------- */
 .mrow{display:flex; align-items:center; gap:10px; padding:6px 0; font-size:13.5px}
@@ -117,55 +166,77 @@ main{flex:1; overflow-y:auto; padding:4px 16px 16px; display:flex; flex-directio
 .mrow .mv small{color:var(--faint); font-size:11px}
 
 /* ---------------- meals ---------------- */
-.meal{border-top:1px solid var(--line); padding-top:10px; margin-top:10px}
-.meal:first-of-type{border-top:0; padding-top:0; margin-top:0}
-.meal h4{display:flex; align-items:center; gap:8px; font-size:13px; font-weight:600; margin-bottom:4px}
+.mealc{background:var(--card); border:1px solid var(--line); border-radius:var(--r); padding:14px 14px 4px; box-shadow:var(--shadow)}
+.mealc.empty{padding-bottom:14px; background:transparent; box-shadow:none; border-style:dashed; border-color:var(--line2)}
+.mh{display:flex; align-items:center; gap:12px}
+.mh .mi{width:38px; height:38px; border-radius:12px; display:grid; place-items:center; flex:0 0 auto;
+  background:color-mix(in srgb, var(--mc) 15%, transparent); color:var(--mc)}
+.mh .mi svg{width:19px; height:19px}
+.mh .mtx{flex:1; min-width:0}
+.mh h4{font-size:15px; font-weight:650; letter-spacing:-.01em; line-height:1.25}
+.mh .mtx .mc{margin-top:2px; font-size:11.5px}
+.mh .none{margin:1px 0 0; font-size:12.5px; color:var(--faint)}
+.mh .mk{font-size:18px; font-weight:720; font-variant-numeric:tabular-nums; letter-spacing:-.03em; white-space:nowrap}
+.mh .mk small{font-size:11.5px; color:var(--faint); font-weight:500; margin-left:3px; letter-spacing:0}
+.mh .add{width:36px; height:36px; border-radius:12px; border:1px solid var(--line2); background:var(--raised);
+  color:var(--text); cursor:pointer; display:grid; place-items:center; flex:0 0 auto; transition:transform .12s}
+.mh .add:active{transform:scale(.94)}
+.mh .add svg{width:18px; height:18px}
+.ents{margin-top:10px; border-top:1px solid var(--line)}
+.ent{display:flex; align-items:center; gap:10px; padding:10px 0; font-size:14.5px; border-bottom:1px solid var(--line)}
+.ent:last-child{border-bottom:0}
+.ent .nb{flex:1; min-width:0; cursor:pointer}
+.ent .n{display:block; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; font-weight:500; cursor:pointer}
+.ent .n em{font-style:normal; color:var(--faint); font-weight:400; font-size:13px; margin-left:4px}
+.ent .nb .mc{margin-top:3px; font-size:11.5px}
+.ent .k{color:var(--text); font-size:14px; font-weight:650; font-variant-numeric:tabular-nums; white-space:nowrap}
+.ent .k small{color:var(--faint); font-weight:500; font-size:11px; margin-left:2px}
+.ent .x{width:28px; height:28px; border-radius:9px; border:0; background:none; color:var(--faint);
+  font-size:18px; line-height:1; cursor:pointer; flex:0 0 auto}
+.ent .x:hover{background:var(--raised)}
+.ent .x:active{color:var(--danger)}
+/* Read-only meal blocks (Trends) */
+.meal{border-top:1px solid var(--line); padding-top:12px; margin-top:12px}
+.meal:first-of-type{border-top:0; padding-top:0; margin-top:4px}
+.meal h4{display:flex; align-items:center; gap:8px; font-size:13.5px; font-weight:650; margin-bottom:2px}
 .meal h4 svg{width:15px; height:15px; color:var(--muted)}
-.meal h4 .mk{margin-left:auto; color:var(--muted); font-weight:500; font-size:12.5px; font-variant-numeric:tabular-nums}
-.ent{display:flex; align-items:center; gap:10px; padding:7px 0 7px 23px; font-variant-numeric:tabular-nums; font-size:14.5px}
-.ent .nb{flex:1; min-width:0}
-.ent .nb .mc{margin-top:2px; font-size:11.5px}
-.ent .n{display:block; overflow:hidden; text-overflow:ellipsis; white-space:nowrap}
-.meal .mtot{padding-left:23px; margin:-2px 0 3px}
-.ent .k{color:var(--muted); font-size:13px}
-.ent .x{background:none; border:0; color:var(--faint); font-size:18px; line-height:1; padding:2px 5px; cursor:pointer}
-.ent .n{cursor:pointer}
-.ed{display:flex; align-items:center; gap:5px; padding:8px 0 10px 23px; flex-wrap:wrap}
+.meal h4 .mk{margin-left:auto; color:var(--muted); font-weight:550; font-size:12.5px; font-variant-numeric:tabular-nums}
+.meal .mtot{padding-left:23px; margin:0 0 2px}
+.meal .ent{padding-left:23px; border-bottom:0; padding-top:7px; padding-bottom:7px}
+.ed{display:flex; align-items:center; gap:6px; padding:4px 0 12px; flex-wrap:wrap}
+.meal .ed{padding-left:23px}
 .ed input{
-  width:58px; padding:7px 6px; font-size:15px; text-align:right; border-radius:9px;
+  width:62px; padding:8px 7px; font-size:15px; text-align:right; border-radius:10px;
   border:1px solid var(--line2); background:var(--raised); color:var(--text);
   font-family:inherit; font-variant-numeric:tabular-nums;
 }
 .ed input:focus{outline:none; border-color:var(--accent)}
 .ed span{color:var(--faint); font-size:11.5px}
-.ed button{padding:7px 10px; font-size:12.5px; border-radius:9px; border:1px solid var(--line2);
-  background:var(--raised); color:var(--text); cursor:pointer}
-.ed button.go{background:var(--accent); color:#0b0d10; border-color:var(--accent); font-weight:600}
-.ed .meals{display:flex; gap:4px; flex-wrap:wrap; width:100%; margin:2px 0 4px}
-.ed .meals button{padding:5px 9px; font-size:11.5px; border-radius:999px; color:var(--muted)}
-.ed .meals button.on{border-color:var(--accent); color:var(--accent)}
+.ed button{padding:8px 12px; font-size:13px; border-radius:10px; border:1px solid var(--line2);
+  background:var(--raised); color:var(--text); cursor:pointer; font-weight:550}
+.ed button.go{background:var(--accent); color:#06120a; border-color:var(--accent); font-weight:650}
+.ed .meals{display:flex; gap:5px; flex-wrap:wrap; width:100%; margin:2px 0 4px}
+.ed .meals button{padding:5px 10px; font-size:12px; border-radius:999px; color:var(--muted)}
+.ed .meals button.on{border-color:var(--accent); color:var(--accent); background:rgba(125,216,143,.08)}
 .ed input[type=date]{width:auto; font-size:13px; text-align:left; color-scheme:dark}
-.moveday{background:none; border:0; color:var(--muted); font-size:12px; cursor:pointer; font-weight:500;
-  letter-spacing:0; text-transform:none; padding:0; margin-left:auto}
-.moveday:active{color:var(--accent)}
-.ent .x:active{color:var(--danger)}
+.dayacts{display:flex; justify-content:center}
+.moveday{background:none; border:0; color:var(--faint); font-size:12.5px; cursor:pointer; font-weight:500; padding:6px 10px}
+.moveday:hover{color:var(--muted)}
 
 /* ---------------- intro ---------------- */
-.intro{margin:auto 0; padding:8px 2px}
-.intro h1{font-size:22px; margin-bottom:6px; font-weight:700; letter-spacing:-.01em}
-.intro p{margin:0 0 18px; color:var(--muted); font-size:14px; max-width:34ch}
-.eg{
-  display:block; width:100%; text-align:left; margin-bottom:8px; padding:12px 14px;
-  background:var(--surface); border:1px solid var(--line); border-radius:var(--r2);
-  color:var(--text); font:inherit; cursor:pointer;
-}
-.eg:active{border-color:var(--muted)}
+.intro{padding:6px 2px 0}
+.egs{display:flex; flex-wrap:wrap; gap:8px}
+.eg{padding:9px 14px; background:var(--surface); border:1px solid var(--line2); border-radius:999px;
+  color:var(--text); font:inherit; font-size:13.5px; cursor:pointer; transition:border-color .2s}
+.eg:hover,.eg:active{border-color:var(--accent)}
 
 /* ---------------- chat ---------------- */
-.msg{max-width:88%; padding:10px 14px; border-radius:var(--r); white-space:pre-wrap; word-wrap:break-word}
-.me{align-self:flex-end; background:#24303f; border-bottom-right-radius:5px}
-.bot{align-self:flex-start; background:var(--surface); border:1px solid var(--line); border-bottom-left-radius:5px}
-.tools{align-self:flex-start; color:var(--faint); font-size:12px; font-family:ui-monospace,monospace}
+.msg{max-width:86%; padding:10px 14px; border-radius:18px; white-space:pre-wrap; word-wrap:break-word; font-size:14.5px; line-height:1.45}
+.me{align-self:flex-end; background:linear-gradient(180deg,#26364c,#203043); border-bottom-right-radius:6px}
+.bot{align-self:flex-start; background:var(--surface); border:1px solid var(--line); border-bottom-left-radius:6px}
+.tools{align-self:flex-start; color:var(--muted); font-size:12px; font-variant-numeric:tabular-nums;
+  background:var(--raised); border:1px solid var(--line); border-radius:999px; padding:5px 11px}
+.tools.ok{color:var(--accent); background:rgba(125,216,143,.08); border-color:rgba(125,216,143,.24)}
 .err{align-self:flex-start; color:var(--danger); font-size:13px}
 .banner{
   background:var(--raised); border:1px solid var(--line); border-left:3px solid var(--warn);
@@ -174,23 +245,28 @@ main{flex:1; overflow-y:auto; padding:4px 16px 16px; display:flex; flex-directio
 .banner b{color:var(--text)}
 
 /* ---------------- editable proposal ---------------- */
-.prow{padding:10px 0; border-bottom:1px solid var(--line)}
+.prow{padding:12px 0; border-bottom:1px solid var(--line)}
 .prow:last-child{border-bottom:0}
-.prow .pn{display:block; margin-bottom:6px; font-size:14.5px}
-.prow .pctl{display:flex; align-items:center; gap:6px}
+.phd{display:flex; align-items:center; gap:8px; margin-bottom:8px}
+.prow .pn{flex:1; min-width:0; font-size:15px; font-weight:600; overflow:hidden; text-overflow:ellipsis; white-space:nowrap}
+.prow .sub{font-size:14.5px; font-weight:700; font-variant-numeric:tabular-nums; white-space:nowrap}
+.prow .drop{width:28px; height:28px; border-radius:9px; background:none; border:0; color:var(--faint); font-size:18px; cursor:pointer; flex:0 0 auto}
+.prow .drop:hover{background:var(--raised)}
+.prow .pctl{display:flex; flex-wrap:wrap; gap:6px 12px}
+.prow .pctl label{display:flex; align-items:center; gap:5px}
 .prow input{
-  width:54px; flex:0 0 auto; padding:7px 6px; font-size:14px; text-align:right;
-  border-radius:9px; border:1px solid var(--line2); background:var(--raised);
+  width:62px; flex:0 0 auto; padding:7px 8px; font-size:14.5px; text-align:right;
+  border-radius:10px; border:1px solid var(--line2); background:var(--raised);
   color:var(--text); font-family:inherit; font-variant-numeric:tabular-nums;
 }
 .prow input:focus{outline:none; border-color:var(--accent)}
-.prow .unit{color:var(--faint); font-size:11.5px; flex:0 0 auto}
-.prow .sub{color:var(--text); font-size:13.5px; margin-left:auto; flex:0 0 auto; font-variant-numeric:tabular-nums}
-.prow .drop{background:none; border:0; color:var(--faint); font-size:18px; cursor:pointer; padding:2px 2px 2px 8px}
+.prow .unit{color:var(--faint); font-size:11.5px; white-space:nowrap}
 .edited{color:var(--accent); font-size:12px; margin-top:9px}
+.card.review{border-color:rgba(125,216,143,.32); box-shadow:0 0 0 4px rgba(125,216,143,.05), var(--shadow)}
+.mealpick button{transition:all .2s}
 .mealpick{display:flex; gap:6px; margin:4px 0 8px; flex-wrap:wrap}
 .mealpick button{background:var(--raised); border:1px solid var(--line); color:var(--muted); border-radius:999px; padding:4px 10px; font-size:12px; cursor:pointer}
-.mealpick button.on{border-color:var(--accent); color:var(--accent)}
+.mealpick button.on{border-color:var(--accent); color:var(--accent); background:rgba(125,216,143,.08)}
 .prow .mc{margin-top:7px}
 .ptot{display:flex; align-items:baseline; flex-wrap:wrap; gap:6px 14px; border-top:1px solid var(--line); margin-top:4px; padding-top:12px}
 .ptot .gk{font-size:26px; font-weight:700; letter-spacing:-.02em; font-variant-numeric:tabular-nums; line-height:1}
@@ -205,7 +281,7 @@ main{flex:1; overflow-y:auto; padding:4px 16px 16px; display:flex; flex-directio
 .arow .at i.was{left:0; opacity:.45; border-radius:5px 0 0 5px}
 .arow .at i.add{transition:width .25s ease}
 .arow .at u{position:absolute; top:-3px; bottom:-3px; width:2px; background:var(--muted); text-decoration:none}
-.arow .av{width:104px; text-align:right; flex:0 0 auto; font-variant-numeric:tabular-nums; color:var(--muted)}
+.arow .av{min-width:104px; text-align:right; flex:0 0 auto; font-variant-numeric:tabular-nums; color:var(--muted); white-space:nowrap}
 .arow .av b{color:var(--text)} .arow .av b.over{color:var(--warn)}
 .arow .av small{color:var(--faint); font-size:11px}
 
@@ -245,7 +321,7 @@ svg.chart{display:block; width:100%; height:auto; overflow:visible}
 .bignum .delta{margin-left:auto; font-size:12px; color:var(--faint)}
 .stat3{display:grid; grid-template-columns:repeat(3,1fr); gap:10px}
 .stat3 div{background:var(--raised); border-radius:var(--r2); padding:10px 12px}
-.stat3 b{display:block; font-size:20px; font-variant-numeric:tabular-nums; letter-spacing:-.01em}
+.stat3 b{display:block; white-space:nowrap; font-size:18px; font-variant-numeric:tabular-nums; letter-spacing:-.01em}
 .stat3 small{color:var(--faint); font-size:11px; text-transform:uppercase; letter-spacing:.05em}
 .stat3 .down{color:var(--accent)} .stat3 .up{color:var(--warn)}
 
@@ -276,25 +352,27 @@ svg.chart{display:block; width:100%; height:auto; overflow:visible}
 .ins p{margin:0; font-size:14.5px}
 
 /* ---------------- chrome ---------------- */
-footer{padding:10px 12px; border-top:1px solid var(--line); display:flex; gap:8px; background:var(--bg); flex:0 0 auto}
-input#say{
-  flex:1; padding:12px 14px; border-radius:var(--r2); border:1px solid var(--line2);
-  background:var(--surface); color:var(--text); font-size:16px; font-family:inherit;
-}
+footer{padding:8px 12px 10px; display:flex; flex:0 0 auto; background:var(--bg); border-top:1px solid var(--line)}
+.composer{flex:1; display:flex; align-items:center; gap:8px; background:var(--surface); border:1px solid var(--line2);
+  border-radius:999px; padding:5px 5px 5px 16px; transition:border-color .2s, box-shadow .2s}
+.composer:focus-within{border-color:rgba(125,216,143,.55); box-shadow:0 0 0 4px rgba(125,216,143,.09)}
+.composer > svg{width:17px; height:17px; color:var(--accent); flex:0 0 auto}
+input#say{flex:1; min-width:0; border:0; background:none; color:var(--text); font-size:16px; font-family:inherit; padding:8px 0; outline:none}
 input#say::placeholder{color:var(--faint)}
-input#say:focus{outline:none; border-color:var(--accent)}
-#send{flex:0 0 auto; width:46px; padding:0; display:flex; align-items:center; justify-content:center}
-#send svg{width:20px; height:20px}
+#send{flex:0 0 auto; width:40px; height:40px; border-radius:50%; padding:0; display:grid; place-items:center}
+#send svg{width:19px; height:19px}
 nav{
-  display:flex; border-top:1px solid var(--line); background:var(--bg); flex:0 0 auto;
-  padding-bottom:env(safe-area-inset-bottom);
+  display:flex; background:var(--bg); flex:0 0 auto;
+  padding:2px 6px max(env(safe-area-inset-bottom), 4px);
 }
 nav button{
-  flex:1; padding:9px 4px 10px; background:none; border:0; cursor:pointer;
-  color:var(--faint); font:inherit; font-size:11px; display:flex; flex-direction:column; align-items:center; gap:3px;
+  flex:1; padding:4px 4px 6px; background:none; border:0; cursor:pointer;
+  color:var(--faint); font:inherit; font-size:11px; font-weight:550; display:flex; flex-direction:column; align-items:center; gap:2px;
+  transition:color .2s;
 }
-nav button svg{width:22px; height:22px}
-nav button.on{color:var(--accent)}
+nav button svg{width:56px; height:30px; padding:4px 17px; border-radius:999px; transition:background .25s, color .25s}
+nav button.on{color:var(--text)}
+nav button.on svg{background:rgba(125,216,143,.15); color:var(--accent)}
 
 /* ---------------- auth screens ---------------- */
 .gate{margin:auto; padding:26px 22px; max-width:380px; width:100%}
@@ -446,24 +524,29 @@ nav button.on{color:var(--accent)}
 </head>
 <body>
 <header>
-  <div class="brand"><i></i>Calorie Counter</div>
-  <button class="acct" id="acct" title="settings"></button>
+  <div class="ttl"><h1 id="dtitle">Today</h1><p id="dsub"></p></div>
+  <div class="streak" id="streak" hidden></div>
+  <button class="acct" id="acct" aria-label="settings"></button>
 </header>
 
 <div id="daybar">
-  <button id="prev" title="previous day">‹</button>
-  <input type="date" id="picker">
-  <button id="next" title="next day">›</button>
-  <span id="daytag"></span>
+  <div class="week" id="week"></div>
+  <label class="cal" id="cal" aria-label="pick a date">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="5" width="18" height="16" rx="3"/><path d="M3 10h18M8 3v4M16 3v4"/></svg>
+    <input type="date" id="picker">
+  </label>
 </div>
 
 <main id="view"></main>
 
 <footer id="bar">
-  <input id="say" placeholder="what did you eat?" autocomplete="off" enterkeyhint="send">
-  <button class="b go" id="send" aria-label="send">
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M13 5l7 7-7 7"/></svg>
-  </button>
+  <div class="composer">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l1.8 5.2L19 10l-5.2 1.8L12 17l-1.8-5.2L5 10l5.2-1.8z"/></svg>
+    <input id="say" placeholder="What did you eat?" autocomplete="off" enterkeyhint="send">
+    <button class="b go" id="send" aria-label="send">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M12 19V5M5 12l7-7 7 7"/></svg>
+    </button>
+  </div>
 </footer>
 
 <nav>
@@ -488,8 +571,9 @@ let me = null
 let pass = localStorage.getItem('passcode') || ''
 // Days already fetched are kept, so stepping back to one you just looked at
 // is instant. Anything that writes clears the lot.
-const cache = { days: new Map(), range: null, body: null, insights: null }
-const forget = () => { cache.days.clear(); cache.range = null; cache.body = null }
+const cache = { days: new Map(), range: null, body: null, insights: null, weeks: new Map(), streak: null }
+const forget = () => { cache.days.clear(); cache.range = null; cache.body = null; cache.weeks.clear(); cache.streak = null }
+let lastTargets = null
 let pickedDay = null
 
 const headers = () => ({ 'content-type': 'application/json', 'x-passcode': pass })
@@ -560,33 +644,56 @@ function macroPanel(totals, targets = {}, avg = null) {
   }).join('')
 }
 
-/* ================================================================== ring */
-function ringHero(d) {
+/* ================================================================== hero */
+const fmt = (n) => Math.round(Number(n) || 0).toLocaleString('en-US')
+// A ring drawn from 12 o'clock. The fill animates in from empty (CSS `draw`).
+const arc = (cx, r, frac, cls, style = '') => {
+  const C = 2 * Math.PI * r
+  return `<circle class="${cls}" cx="${cx}" cy="${cx}" r="${r}" style="--len:${C.toFixed(1)};${style}"
+    stroke-dasharray="${C.toFixed(1)}" stroke-dashoffset="${(C * (1 - Math.min(1, frac))).toFixed(1)}"></circle>`
+}
+// Protein and fibre are floors - beating them is the point, so they never warn.
+const MINI = [
+  { k: 'protein_g', t: 'target_protein_g', label: 'protein', c: '--protein' },
+  { k: 'carbs_g', t: 'target_carbs_g', label: 'carbs', c: '--carbs', cap: true },
+  { k: 'fat_g', t: 'target_fat_g', label: 'fat', c: '--fat', cap: true },
+  { k: 'fiber_g', t: 'target_fiber_g', label: 'fibre', c: '--fiber' },
+  { k: 'sugar_g', t: 'target_sugar_g', label: 'sugar', c: '--sugar', cap: true },
+]
+
+function heroCard(d) {
   const target = d.targets?.target_kcal || 0
   const eaten = d.totals.kcal || 0
-  const R = 60, C = 2 * Math.PI * R
-  const frac = target ? Math.min(1, eaten / target) : 0
-  const left = target ? Math.round(target - eaten) : null
   const over = target && eaten > target
+  const left = Math.round(target - eaten)
   const center = target
-    ? `<b>${Math.abs(left)}</b><small>${over ? 'over target' : `left of ${Math.round(target)}`}</small>`
-    : `<b>${eaten}</b><small>kcal · no target</small>`
+    ? `<b>${fmt(Math.abs(left))}</b><small>${over ? 'kcal over' : 'kcal left'}</small>`
+    : `<b>${fmt(eaten)}</b><small>kcal eaten</small>`
   const p = d.totals.protein_g || 0, pt = d.targets?.target_protein_g || 0
-  return `<div class="ringwrap">
-    <div class="ring">
-      <svg viewBox="0 0 140 140">
-        <circle class="track" cx="70" cy="70" r="${R}"></circle>
-        <circle class="fill ${over ? 'over' : ''}" cx="70" cy="70" r="${R}"
-          stroke-dasharray="${(frac * C).toFixed(1)} ${C.toFixed(1)}"></circle>
-      </svg>
-      <div class="c">${center}</div>
+  const togo = Math.max(0, Math.round(pt - p))
+  const minis = MINI.map((m) => {
+    const g = d.totals[m.k] || 0, t = d.targets?.[m.t] || 0
+    const warn = m.cap && t && g > t * 1.05, hit = !m.cap && t && g >= t
+    return `<div class="mini ${warn ? 'over' : hit ? 'hit' : ''}">
+      <div class="mr"><svg viewBox="0 0 50 50"><circle class="track" cx="25" cy="25" r="21"></circle>
+        ${t && g ? arc(25, 21, g / t, 'fill', `stroke:var(${warn ? '--warn' : m.c})`) : ''}</svg>
+        <span class="v">${Math.round(g)}</span></div>
+      <span class="l">${m.label}</span><span class="t">${t ? `of ${Math.round(t)}g` : 'grams'}</span>
+    </div>`
+  }).join('')
+  return `<div class="htop">
+      <div class="ring"><svg viewBox="0 0 148 148">
+        <defs><linearGradient id="kg" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#b4f3c0"/><stop offset="1" stop-color="#43b45f"/></linearGradient></defs>
+        <circle class="track" cx="74" cy="74" r="62"></circle>
+        ${target && eaten ? arc(74, 62, eaten / target, `fill ${over ? 'over' : ''}`) : ''}
+      </svg><div class="c">${center}</div></div>
+      <div class="hstats">
+        <div><small>Eaten</small><b>${fmt(eaten)}<em>kcal</em></b></div>
+        <div><small>Target</small><b>${target ? `${fmt(target)}<em>kcal</em>` : '<a href="#" id="setT">set one →</a>'}</b></div>
+        ${pt ? `<div><small>Protein</small><b class="${togo ? '' : 'ok'}">${togo ? `${togo}<em>g to go</em>` : 'target hit'}</b></div>` : ''}
+      </div>
     </div>
-    <div class="ringside">
-      <div class="kv"><span>eaten</span><b>${eaten} kcal</b></div>
-      <div class="kv"><span>protein</span><b>${Math.round(p)}g${pt ? ` <span style="color:var(--faint)">/ ${Math.round(pt)}</span>` : ''}</b></div>
-      <div class="kv"><span>${target ? 'target' : 'set a target'}</span><b>${target ? `${Math.round(target)} kcal` : `<a href="#" id="setT" style="color:var(--accent)">settings →</a>`}</b></div>
-    </div>
-  </div>`
+    <div class="minis">${minis}</div>`
 }
 
 /* ================================================================= meals */
@@ -610,27 +717,52 @@ const sumMacros = (rows) => rows.reduce((t, r) => {
   return t
 }, { kcal: 0, protein_g: 0, carbs_g: 0, fat_g: 0, fiber_g: 0 })
 // short: "P 12g  C 30g" for item rows; long: "12g protein" for totals
-function macroChips(t, long = false) {
+function macroChips(t, long = false, all = long) {
   // An item row skips its zeros ("Fb 0g" on an egg is noise); totals keep them.
-  return `<div class="mc">${CHIPS.filter(([k]) => long || grams(t[k])).map(([k, s, l, c]) =>
+  return `<div class="mc">${CHIPS.filter(([k]) => all || grams(t[k])).map(([k, s, l, c]) =>
     `<span style="--c:var(${c})">${long ? '' : s + ' '}<b>${grams(t[k])}</b>g${long ? ' ' + l : ''}</span>`).join('')}</div>`
 }
 
-function mealGroups(rows, editable = true) {
-  const groups = {}
-  for (const r of rows) (groups[r.meal ?? null] ??= []).push(r)
+const MEAL_COLOR = { breakfast: '#f2b35b', lunch: '#7dd88f', dinner: '#93a0f7', snack: '#ef8fb6', null: '#8f98a6' }
+const PLUS = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>'
+// "150 g", "3 pieces", "1 bowl" - the amount reads after the name, quietly.
+const qtyText = (qty, unit) => {
+  const u = String(unit ?? '')
+  if (['g', 'ml'].includes(u.toLowerCase())) return `${qty} ${u}`
+  return `${qty} ${Number(qty) === 1 || /s$/.test(u) ? u : u + 's'}`
+}
+const entRow = (r, editable) => `<div class="ent" data-id="${r.id}">
+    <div class="nb"><span class="n">${esc(cap(r.name))}<em>${esc(qtyText(r.qty, r.unit))}</em></span>${macroChips(r)}</div>
+    <span class="k">${fmt(r.kcal)}<small>kcal</small></span>
+    ${editable ? '<button class="x" aria-label="remove">×</button>' : ''}
+  </div>`
+const byMeal = (rows) => { const g = {}; for (const r of rows) (g[r.meal ?? null] ??= []).push(r); return g }
+
+function mealGroups(rows) {
+  const groups = byMeal(rows)
   return MEAL_ORDER.filter((m) => groups[m]?.length).map((m) => {
-    const list = groups[m]
-    const sum = sumMacros(list)
+    const list = groups[m], sum = sumMacros(list)
     return `<div class="meal">
-      <h4>${MEAL_ICON[m]}${m ? cap(m) : 'Unsorted'}<span class="mk">${Math.round(sum.kcal)} kcal</span></h4>
-      <div class="mtot">${macroChips(sum, true)}</div>
-      ${list.map((r) => `<div class="ent" data-id="${r.id}">
-        <div class="nb"><span class="n">${qtyLabel(r.qty, r.unit)} ${esc(cap(r.name))}</span>${macroChips(r)}</div>
-        <span class="k">${r.kcal} kcal</span>
-        ${editable ? '<button class="x" title="remove">×</button>' : ''}
-      </div>`).join('')}
+      <h4>${MEAL_ICON[m]}${m ? cap(m) : 'Unsorted'}<span class="mk">${fmt(sum.kcal)} kcal</span></h4>
+      <div class="mtot">${macroChips(sum, false, true)}</div>
+      ${list.map((r) => entRow(r, false)).join('')}
     </div>`
+  }).join('')
+}
+
+// The Log screen: all four meals, always, so an empty one is an invitation.
+function mealCards(rows) {
+  const groups = byMeal(rows)
+  return MEAL_ORDER.filter((m) => m !== null || groups[m]?.length).map((m) => {
+    const list = groups[m] ?? [], sum = sumMacros(list)
+    return `<section class="mealc ${list.length ? '' : 'empty'}" style="--mc:${MEAL_COLOR[m]}">
+      <div class="mh"><span class="mi">${MEAL_ICON[m]}</span>
+        <div class="mtx"><h4>${m ? cap(m) : 'Unsorted'}</h4>${list.length ? macroChips(sum, false, true) : '<p class="none">Nothing logged</p>'}</div>
+        ${list.length ? `<b class="mk">${fmt(sum.kcal)}<small>kcal</small></b>`
+                      : `<button class="add" data-m="${m}" aria-label="add ${m}">${PLUS}</button>`}
+      </div>
+      ${list.length ? `<div class="ents">${list.map((r) => entRow(r, true)).join('')}</div>` : ''}
+    </section>`
   }).join('')
 }
 
@@ -712,9 +844,8 @@ function bubble(cls, text) {
 }
 
 function intro() {
-  const box = el('intro', `<h1>What did you eat?</h1>
-    <p>Type it however you'd say it. I work out the calories, you confirm, it's logged.</p>
-    <div class="lbl">try</div>` + EXAMPLES.map((e) => `<button class="eg">${esc(e)}</button>`).join(''))
+  const box = el('intro', `<div class="lbl">Try typing</div><div class="egs">` +
+    EXAMPLES.map((e) => `<button class="eg">${esc(e)}</button>`).join('') + `</div>`)
   box.querySelectorAll('.eg').forEach((b) => (b.onclick = () => { $('say').value = b.textContent; send() }))
   return box
 }
@@ -731,36 +862,46 @@ async function loadBody() { return (cache.body ??= await api(`/api/body?today=${
 
 async function viewLog() {
   const d = await loadDay()
+  lastTargets = d.targets
+  paintWeek()
+  paintStreak()
   view.innerHTML = ''
 
-  const hero = el('card hero', `<h3>${prettyDate(logDate)}</h3>${ringHero(d)}<div style="height:12px"></div>${macroPanel(d.totals, d.targets)}`)
+  const hero = el('card hero', heroCard(d))
   view.appendChild(hero)
-  hero.querySelector('#setT')?.addEventListener('click', (e) => { e.preventDefault(); settingsScreen() })
-  if (!d.targets?.target_kcal) {
-    loadRange(30).then((r) => { if (r?.daysLogged && hero.isConnected)
-      hero.querySelector('.mrow')?.parentElement && (hero.innerHTML = `<h3>${prettyDate(logDate)}</h3>${ringHero(d)}<div style="height:12px"></div>${macroPanel(d.totals, d.targets, r.averages)}`) }).catch(() => {})
-  }
+  hero.querySelector('#setT')?.addEventListener('click', (e) => { e.preventDefault(); targetsScreen() })
+
+  const tmp = document.createElement('div')
+  tmp.innerHTML = mealCards(d.rows)
+  ;[...tmp.children].forEach((c) => view.appendChild(c))
+
+  // An empty meal's + starts the sentence for you; the agent reads the meal from it.
+  view.querySelectorAll('.mealc .add').forEach((b) => (b.onclick = () => {
+    const say = $('say')
+    say.value = `${b.dataset.m}: `
+    say.focus(); say.setSelectionRange(say.value.length, say.value.length)
+  }))
 
   if (d.rows.length) {
-    const box = el('card', `<h3>what you ate<span class="r">${d.rows.length} items</span>
-      <button class="moveday">move day →</button></h3>${mealGroups(d.rows)}`)
+    const acts = el('dayacts', `<button class="moveday">Move this day's food to another date →</button>`)
+    view.appendChild(acts)
     // Writing up yesterday after midnight dates the whole lot to the new day.
-    box.querySelector('.moveday').onclick = async () => {
+    acts.querySelector('.moveday').onclick = async () => {
       const to = prompt(`Move all ${d.rows.length} entries from ${logDate} to which date?`, shiftIso(logDate, -1))
       if (!to || !/^\d{4}-\d{2}-\d{2}$/.test(to) || to === logDate) return
       const out = await api('/api/day', { method: 'PATCH', body: JSON.stringify({ from: logDate, to }) })
       if (out.moved) { forget(); setDay(to) } else alert(out.error || 'nothing moved')
     }
-    box.querySelectorAll('.ent').forEach((row) => {
+    view.querySelectorAll('.mealc .ent').forEach((row) => {
       const entry = d.rows.find((r) => String(r.id) === row.dataset.id)
       row.querySelector('.x').onclick = async () => {
         row.style.opacity = .4
         const out = await api(`/api/entry?id=${row.dataset.id}`, { method: 'DELETE' })
         out.deleted ? (forget(), render()) : (row.style.opacity = 1)
       }
-      // Tap the name to fix just this entry - a wrong quantity on one day is
+      // Tap the item to fix just this entry - a wrong quantity on one day is
       // not a reason to argue with the agent, and must not change the food.
-      row.querySelector('.n').onclick = () => {
+      row.querySelector('.nb').onclick = () => {
         if (row.nextElementSibling?.classList.contains('ed')) return row.nextElementSibling.remove()
         const isWeight = ['g', 'ml'].includes(String(entry.unit).toLowerCase())
         const ed = el('ed', `
@@ -794,7 +935,6 @@ async function viewLog() {
         q.focus(); q.select()
       }
     })
-    view.appendChild(box)
   } else if (!chat.length) view.appendChild(intro())
 
   if (me?.signedIn && me.user.plan === 'hosted' && !sessionStorage.getItem('hostedNote')) {
@@ -802,14 +942,16 @@ async function viewLog() {
     sessionStorage.setItem('hostedNote', '1')
   }
   chat.forEach((n) => view.appendChild(n))
-  view.scrollTop = view.scrollHeight
+  // Only jump to the bottom when there is a conversation to follow; a fresh
+  // day opens at the top, on the rings.
+  view.scrollTop = chat.length ? view.scrollHeight : 0
 }
 
 /* ============================================================ proposal */
 function proposalCard(p) {
   const rows = p.rows.map((r) => ({ ...r }))
   let meal = p.meal ?? null
-  const box = el('card', `<h3>${prettyDate(p.date)}</h3>
+  const box = el('card review', `<h3>Review and log<span class="r">${prettyDate(p.date)}</span></h3>
     <div class="mealpick">${['breakfast', 'lunch', 'dinner', 'snack'].map((m) => `<button data-m="${m}" class="${m === meal ? 'on' : ''}">${cap(m)}</button>`).join('')}</div>
     <div class="plist"></div>
     <div class="ptot"><span class="gk"></span><span class="gm"></span></div>
@@ -861,7 +1003,7 @@ function proposalCard(p) {
         <i class="add" style="left:${was / top * 100}%;width:${(now - was) / top * 100}%;background:${over ? 'var(--warn)' : m.c}"></i>
         ${target ? `<u style="left:${Math.min(99, target / top * 100)}%"></u>` : ''}
       </span>
-      <span class="av">${grams(was)} → <b class="${over ? 'over' : ''}">${grams(now)}</b>${target ? `<small>/${Math.round(target)}${m.unit}</small>` : m.unit}</span>
+      <span class="av">${m.k === 'kcal' ? fmt(was) : grams(was)} → <b class="${over ? 'over' : ''}">${m.k === 'kcal' ? fmt(now) : grams(now)}</b>${target ? `<small>/${Math.round(target)}${m.unit}</small>` : m.unit}</span>
     </div>`
   }).join('')
 
@@ -882,16 +1024,12 @@ function proposalCard(p) {
     r.orig_protein = r.protein_per_unit ?? 0
     r.protein_per_unit = r.protein_per_unit ?? (r.qty ? (r.protein_g * (r.basis || 1)) / r.qty : 0)
     for (const m of ['carbs', 'fat', 'fiber']) r[`${m}_per_unit`] ??= r.qty ? ((r[`${m}_g`] || 0) * (r.basis || 1)) / r.qty : 0
-    const line = el('prow', `<span class="pn">${esc(cap(r.name))}</span>
+    const line = el('prow', `<div class="phd"><span class="pn">${esc(cap(r.name))}</span>
+        <span class="sub"></span><button class="drop" aria-label="remove">×</button></div>
       <div class="pctl">
-        <input class="q" type="number" inputmode="decimal" min="0" step="0.5" value="${r.qty}">
-        <span class="unit">${esc(r.basis > 1 ? r.unit : '× ' + r.unit)}</span>
-        <input class="k" type="number" inputmode="numeric" min="0" step="5" value="${Math.round(r.kcal_per_unit)}">
-        <span class="unit">kcal</span>
-        <input class="p" type="number" inputmode="decimal" min="0" step="0.5" value="${Math.round((r.protein_per_unit ?? 0) * 10) / 10}">
-        <span class="unit">P${r.basis > 1 ? '/100' + esc(r.unit) : ''}</span>
-        <span class="sub"></span>
-        <button class="drop" title="remove">×</button>
+        <label><input class="q" type="number" inputmode="decimal" min="0" step="0.5" value="${r.qty}"><span class="unit">${esc(r.basis > 1 ? r.unit : '× ' + r.unit)}</span></label>
+        <label><input class="k" type="number" inputmode="numeric" min="0" step="5" value="${Math.round(r.kcal_per_unit)}"><span class="unit">kcal${r.basis > 1 ? '/100' + esc(r.unit) : ' each'}</span></label>
+        <label><input class="p" type="number" inputmode="decimal" min="0" step="0.5" value="${Math.round((r.protein_per_unit ?? 0) * 10) / 10}"><span class="unit">g protein${r.basis > 1 ? '/100' + esc(r.unit) : ' each'}</span></label>
       </div>
       <div class="pm"></div>`)
     const sub = line.querySelector('.sub'), pm = line.querySelector('.pm')
@@ -923,11 +1061,11 @@ function proposalCard(p) {
     box.querySelector('.acts')?.remove()
     if (out.written) {
       const t = out.totals
-      bubble('tools', `logged · ${t.kcal} kcal · P ${grams(t.protein_g)}g · C ${grams(t.carbs_g)}g · Fb ${grams(t.fiber_g)}g${meal ? ` · ${meal}` : ''}`)
+      bubble('tools ok', `logged · ${t.kcal} kcal · P ${grams(t.protein_g)}g · C ${grams(t.carbs_g)}g · Fb ${grams(t.fiber_g)}g${meal ? ` · ${meal}` : ''}`)
       const edits = (out.corrected ?? []).map((c) =>
         `${c.name} is ${c.to} kcal` + (c.protein_to != null ? ` and ${c.protein_to}g protein` : '') + ` per unit, not ${c.from}` + (c.protein_from != null ? `/${c.protein_from}g` : ''))
       history.push({ role: 'user', text: `(I confirmed and logged: ${items.map((i) => `${i.qty} x ${i.name}`).join(', ')}` + (edits.length ? `. Remember: ${edits.join('; ')}` : '') + ')' })
-      if (edits.length) bubble('tools', `learned · ${edits.join('; ')}`)
+      if (edits.length) bubble('tools ok', `learned · ${edits.join('; ')}`)
       forget()
       render()
     } else bubble('err', out.error || 'could not save')
@@ -1028,7 +1166,7 @@ async function viewTrends() {
   const avg = r.averages[m.key] || 0
   pickedDay ??= r.days.filter((d) => d.items.length).at(-1)?.date ?? r.days.at(-1).date
 
-  const chart = el('card', `<h3>${m.label} · avg ${Math.round(avg)}${m.unit}<span class="r">dashed = average</span></h3>
+  const chart = el('card', `<h3>${cap(m.label)} · avg ${fmt(avg)} ${m.unit}<span class="r">dashed = average</span></h3>
     <div class="pills">${[7, 14, 30, 90].map((n) => `<button data-n="${n}" class="${n === trendSpan ? 'on' : ''}">${n}d</button>`).join('')}</div>
     <div class="pills">${METRICS.map((x) => `<button data-k="${x.key}" class="${x.key === trendMetric ? 'on' : ''}">${x.label}</button>`).join('')}</div>
     ${r.daysLogged ? weekChart(r.days, avg, m.key, pickedDay, m.color) : '<p class="hint">Nothing logged in this window yet.</p>'}`)
@@ -1046,19 +1184,19 @@ async function viewTrends() {
   const a = r.averages
   const logged = r.days.filter((d) => d.items.length), kcals = logged.map((d) => d.kcal)
   const hi = logged.reduce((x, d) => (d.kcal > x.kcal ? d : x), logged[0]), lo = logged.reduce((x, d) => (d.kcal < x.kcal ? d : x), logged[0])
-  view.appendChild(el('card', `<h3>daily average · ${r.daysLogged} of ${r.days.length} days</h3>
+  view.appendChild(el('card', `<h3>Daily average · ${r.daysLogged} of ${r.days.length} days</h3>
     <div class="bignum"><b>${Math.round(a.kcal)}</b><span>kcal a day</span></div>${macroPanel(a)}`))
-  view.appendChild(el('card', `<h3>where the energy comes from</h3>${macroStack(a)}`))
-  view.appendChild(el('card', `<h3>each macro, day by day</h3><div class="sm">` +
+  view.appendChild(el('card', `<h3>Where the energy comes from</h3>${macroStack(a)}`))
+  view.appendChild(el('card', `<h3>Each macro, day by day</h3><div class="sm">` +
     [['protein_g', 'protein', 'var(--protein)'], ['carbs_g', 'carbs', 'var(--carbs)'], ['fat_g', 'fat', 'var(--fat)'], ['sugar_g', 'sugar', 'var(--carbs)']]
       .map(([k, label, c]) => `<figure><figcaption><span>${label}</span><b>${Math.round(a[k])}g avg</b></figcaption>${spark(r.days, k, c)}</figure>`).join('') + `</div>`))
-  view.appendChild(el('card', `<h3>spread</h3>
+  view.appendChild(el('card', `<h3>Spread</h3>
     <div class="row"><span>highest day</span><span>${dayName(hi.date)} ${shortDate(hi.date)} · ${hi.kcal} kcal</span></div>
     <div class="row"><span>lowest day</span><span>${dayName(lo.date)} ${shortDate(lo.date)} · ${lo.kcal} kcal</span></div>
     <div class="row"><span>range</span><span>${Math.max(...kcals) - Math.min(...kcals)} kcal</span></div>
     <div class="row"><span>days over average</span><span>${kcals.filter((k) => k > a.kcal).length} of ${kcals.length}</span></div>`))
   const max = Math.max(...r.topFoods.map((f) => f.times), 1)
-  view.appendChild(el('card', `<h3>most eaten</h3>` + r.topFoods.map((f) => `<div class="frow">
+  view.appendChild(el('card', `<h3>Most eaten</h3>` + r.topFoods.map((f) => `<div class="frow">
     <span class="fn">${esc(cap(f.name))}</span><span class="fb"><i style="width:${f.times / max * 100}%"></i></span><span class="fc">${f.times}×</span></div>`).join('')))
 }
 
@@ -1068,7 +1206,7 @@ async function viewBody() {
   view.innerHTML = ''
 
   // weigh-in first: it is the thing you do every morning
-  const form = el('card hero', `<h3>weigh in</h3>
+  const form = el('card hero', `<h3>Weigh in</h3>
     <div class="wform"><input id="wkg" type="number" inputmode="decimal" step="0.05" min="20" max="400"
       placeholder="${b.latest ? b.latest.kg : 'kg'}"><button class="b go" id="wsave">save</button></div>
     <div class="wform" style="margin-top:8px">
@@ -1090,7 +1228,7 @@ async function viewBody() {
   view.appendChild(form)
 
   if (!b.series.length) {
-    return view.appendChild(el('card', `<h3>trend</h3><p class="hint">Log your first weight above. After a week the trend appears; after three the agent measures your real maintenance calories from it.</p>`))
+    return view.appendChild(el('card', `<h3>Trend</h3><p class="hint">Log your first weight above. After a week the trend appears; after three the agent measures your real maintenance calories from it.</p>`))
   }
 
   const dir = (v) => v == null ? '·' : `${v > 0 ? '+' : ''}${v} kg`
@@ -1099,7 +1237,7 @@ async function viewBody() {
   // check. "now" used to sit over the 7-day average, so saving 77.5 and being
   // shown 77.25 read as the save having failed.
   const fresh = b.latest.date === isoToday()
-  view.appendChild(el('card', `<h3>weight<span class="r">${fresh ? 'today' : prettyDate(b.latest.date)}</span></h3>
+  view.appendChild(el('card', `<h3>Weight<span class="r">${fresh ? 'today' : prettyDate(b.latest.date)}</span></h3>
     <div class="bignum"><b>${b.latest.kg}</b><span>kg${fresh ? ' today' : ' on ' + shortDate(b.latest.date)}</span>
       <span class="delta">7-day average ${b.latest.avg}</span></div>
     <div class="stat3">
@@ -1115,7 +1253,7 @@ async function viewBody() {
       : b.goal_kg ? '' : `<p class="hint" style="margin-top:10px">Set a goal weight in settings to see a projection.</p>`}`))
 
   const m = b.maintenance
-  view.appendChild(el('card', `<h3>maintenance, measured<span class="r">${m ? m.confidence + ' confidence' : ''}</span></h3>` + (m
+  view.appendChild(el('card', `<h3>Maintenance, measured<span class="r">${m ? m.confidence + ' confidence' : ''}</span></h3>` + (m
     ? `<div class="bignum"><b>${m.kcal}</b><span>kcal a day, in your logged units</span></div>
        <p class="hint">Over ${m.over_days} days you logged <b style="color:var(--text)">${m.avg_intake}</b> kcal/day and your weight trend ran at
        <b style="color:var(--text)">${m.kg_per_week} kg/week</b> across ${m.readings} readings. Holding steady would take about
@@ -1125,7 +1263,7 @@ async function viewBody() {
        <p class="hint" style="margin-top:8px">To lose ~0.5 kg/week, target about <b style="color:var(--text)">${m.kcal - 500}</b>.</p>`
     : `<p class="hint">Needs about ten days of weights alongside your food log. Then this becomes the one number the agent was guessing at.</p>`)))
 
-  const list = el('card', `<h3>readings<span class="r">tap to edit</span></h3>` + [...b.series].reverse().slice(0, 14).map((s) =>
+  const list = el('card', `<h3>Readings<span class="r">tap to edit</span></h3>` + [...b.series].reverse().slice(0, 14).map((s) =>
     `<div class="ent" data-date="${s.date}" data-kg="${s.kg}" style="padding-left:0"><span class="n">${prettyDate(s.date)}</span><span class="k">${s.kg} kg</span><button class="x" title="remove">×</button></div>`).join(''))
   list.querySelectorAll('.ent').forEach((row) => {
     row.querySelector('.x').onclick = async () => {
@@ -1159,7 +1297,7 @@ async function viewBody() {
 /* ============================================================= insights */
 async function viewInsights() {
   view.innerHTML = ''
-  const box = el('card', `<h3>insights · last 14 days</h3>
+  const box = el('card', `<h3>Insights · last 14 days</h3>
     <p class="hint">A separate pass over your history. It reads the whole log at once and tells you what to change.</p>
     <div class="acts"><button class="b go" id="gen">read my log</button></div>`)
   view.appendChild(box)
@@ -1196,7 +1334,7 @@ function settingsSheet() {
   scrim.className = 'scrim'
   scrim.innerHTML = `<div class="sheet" role="dialog" aria-modal="true" aria-label="Settings">
     <div class="grab"></div>
-    <h3>settings</h3>
+    <h3>Settings</h3>
     <button class="srow" id="s_targets">${SICO.target}targets${CHEV}</button>
     ${me?.signedIn ? `<button class="srow" id="s_plan">${SICO.key}AI plan &amp; key${CHEV}</button>
     <a class="srow" href="/api/auth/logout">${SICO.out}sign out</a>` : ''}
@@ -1234,12 +1372,12 @@ async function targetsScreen() {
   const f = (k, label, ph) => `<div class="field"><label>${label}</label><input id="t_${k}" type="number" inputmode="decimal" step="any" value="${t[k] ?? ''}" placeholder="${ph}"></div>`
   view.innerHTML = ''
   $('bar').hidden = true
-  const box = el('card', `<h3>daily targets</h3>
+  const box = el('card', `<h3>Daily targets</h3>
     ${f('target_kcal', 'calories (kcal)', 'e.g. 1755')}
     <div class="grid2">${f('target_protein_g', 'protein (g)', '152')}${f('target_carbs_g', 'carbs (g)', '162')}</div>
     <div class="grid2">${f('target_fat_g', 'fat (g)', '58')}${f('target_sugar_g', 'sugar (g)', '37')}</div>
     <div class="grid2">${f('target_fiber_g', 'fibre (g)', '30')}</div>
-    <h3 style="margin-top:8px">body</h3>
+    <h3 style="margin-top:8px">Body</h3>
     <div class="grid2">${f('goal_kg', 'goal weight (kg)', '75')}${f('height_cm', 'height (cm)', '183')}</div>
     <div class="acts"><button class="b" id="back">back</button><button class="b go" id="save">save</button></div>`)
   view.appendChild(box)
@@ -1272,12 +1410,12 @@ async function render(attempt = 0) {
     if (String(e.message).includes('unauthorized')) return
     view.innerHTML = ''
     if (e.server) {
-      return view.appendChild(el('card', `<h3>something broke</h3><p class="hint">${esc(e.message)}</p>
+      return view.appendChild(el('card', `<h3>Something broke</h3><p class="hint">${esc(e.message)}</p>
         ${/does not exist/.test(e.message) ? '<p class="hint" style="margin-top:8px">That looks like a database migration that has not been run: <code>npm run db:migrate</code></p>' : ''}`))
     }
     if (attempt < RETRY_DELAYS.length) {
       const wait = RETRY_DELAYS[attempt]
-      const card = el('card', `<h3>waking the server up</h3><p class="hint">Free hosting sleeps when idle. Retrying in <b id="cd">${wait / 1000}</b>s…</p>`)
+      const card = el('card', `<h3>Waking the server up</h3><p class="hint">Free hosting sleeps when idle. Retrying in <b id="cd">${wait / 1000}</b>s…</p>`)
       view.appendChild(card)
       let left = wait / 1000
       const tick = setInterval(() => { left--; const c = card.querySelector('#cd'); if (c) c.textContent = left }, 1000)
@@ -1285,7 +1423,7 @@ async function render(attempt = 0) {
       clearInterval(tick)
       return render(attempt + 1)
     }
-    const card = el('card', `<h3>still can't reach the server</h3>
+    const card = el('card', `<h3>Still can't reach the server</h3>
       <p class="hint">Tried ${RETRY_DELAYS.length + 1} times. Check your connection, then try again.</p>
       <div class="acts"><button class="b go" id="again">try again</button></div>`)
     card.querySelector('#again').onclick = () => render(0)
@@ -1296,23 +1434,76 @@ function switchTab(name) {
   tab = name
   document.querySelectorAll('nav button').forEach((b) => b.classList.toggle('on', b.dataset.tab === name))
   $('daybar').style.display = name === 'log' ? 'flex' : 'none'
+  setTitle()
   render()
 }
 document.querySelectorAll('nav button').forEach((b) => (b.onclick = () => switchTab(b.dataset.tab)))
 
+/* ---------- header: title, week strip, streak ---------- */
+const TAB_SUB = { trends: 'What you have been eating', body: 'Weight and maintenance', insights: 'What to change next' }
+function setTitle() {
+  if (tab !== 'log') { $('dtitle').textContent = cap(tab); $('dsub').textContent = TAB_SUB[tab]; return }
+  const t = isoToday()
+  $('dtitle').textContent = logDate === t ? 'Today' : logDate === shiftIso(t, -1) ? 'Yesterday' : dayName(logDate)
+  $('dsub').innerHTML = logDate === t ? `${dayName(t)}, ${shortDate(t)}` : `${shortDate(logDate)} · <b>adding to a past day</b>`
+}
+
+// Seven days ending today while you are in the last week; further back, the
+// week around the day you picked.
+const weekEnd = () => {
+  const t = isoToday()
+  if (logDate >= shiftIso(t, -6)) return t
+  const e = shiftIso(logDate, 3)
+  return e > t ? t : e
+}
+function paintWeek() {
+  const end = weekEnd(), data = cache.weeks.get(end)?.v
+  const byDate = Object.fromEntries((data?.days ?? []).map((d) => [d.date, d]))
+  const target = lastTargets?.target_kcal || 0
+  $('week').innerHTML = Array.from({ length: 7 }, (_, i) => shiftIso(end, i - 6)).map((iso) => {
+    const k = byDate[iso]?.kcal || 0
+    const over = target && k > target * 1.05
+    return `<button class="wd ${iso === logDate ? 'on' : ''} ${iso === isoToday() ? 'today' : ''} ${k ? 'logged' : ''}" data-d="${iso}" aria-label="${prettyDate(iso)}">
+      <span class="dl">${DOW[asDate(iso).getDay()]}</span>
+      <span class="dn"><svg viewBox="0 0 36 36"><circle class="tr" cx="18" cy="18" r="15"></circle>
+        ${k ? arc(18, 15, target ? k / target : 1, `pg ${over ? 'over' : ''}`) : ''}</svg>${asDate(iso).getDate()}</span>
+    </button>`
+  }).join('')
+  $('week').querySelectorAll('.wd').forEach((b) => (b.onclick = () => { if (b.dataset.d !== logDate) setDay(b.dataset.d) }))
+  $('cal').classList.toggle('past', logDate < shiftIso(isoToday(), -6))
+  if (!cache.weeks.has(end)) {
+    const slot = { p: api(`/api/range?days=7&to=${end}`) }
+    cache.weeks.set(end, slot)
+    slot.p.then((r) => { slot.v = r; if (weekEnd() === end) paintWeek() }).catch(() => cache.weeks.delete(end))
+  }
+}
+
+// Consecutive days with something logged. Today not logged YET does not break it.
+const FLAME = '<svg viewBox="0 0 24 24" fill="currentColor" stroke="currentColor" stroke-width="1.2" stroke-linejoin="round"><path d="M8.5 14.5A2.5 2.5 0 0 0 11 12c0-1.38-.5-2-1-3-1.07-2.14-.22-4.05 2-6 .5 2.5 2 4.9 4 6.5 2 1.6 3 3.5 3 5.5a7 7 0 1 1-14 0c0-1.15.43-2.29 1-3a2.5 2.5 0 0 0 2.5 2.5z"/></svg>'
+async function paintStreak() {
+  cache.streak ??= api(`/api/range?days=60&to=${isoToday()}`).catch(() => null)
+  const r = await cache.streak
+  const days = r?.days ?? []
+  let i = days.length - 1, n = 0
+  if (i >= 0 && !days[i].items.length) i--
+  while (i >= 0 && days[i].items.length) { n++; i-- }
+  const el_ = $('streak')
+  el_.hidden = n < 2
+  el_.innerHTML = `${FLAME}${n}`
+  el_.title = `${n}-day logging streak`
+}
+
 function setDay(iso) {
   logDate = iso > isoToday() ? isoToday() : iso
   $('picker').value = logDate
-  const past = logDate !== isoToday()
-  $('daybar').classList.toggle('past', past)
-  $('daytag').innerHTML = `<b>${dayName(logDate)}</b>${past ? 'backfilling' : shortDate(logDate)}`
-  $('next').disabled = !past
+  $('picker').max = isoToday()
+  setTitle()
   chat = []; history = []
   render()
 }
-$('prev').onclick = () => setDay(shiftIso(logDate, -1))
-$('next').onclick = () => setDay(shiftIso(logDate, 1))
 $('picker').addEventListener('change', () => $('picker').value && setDay($('picker').value))
+// Desktop browsers only open the calendar from its own icon; ask for it.
+$('picker').addEventListener('click', (e) => { try { e.target.showPicker?.() } catch {} })
 
 /* ================================================================== auth */
 const GOOGLE_SVG = `<svg viewBox="0 0 48 48"><path fill="#EA4335" d="M24 9.5c3.5 0 6.6 1.2 9 3.6l6.7-6.7C35.6 2.6 30.2 0 24 0 14.6 0 6.5 5.4 2.6 13.2l7.8 6.1C12.3 13.2 17.6 9.5 24 9.5z"/><path fill="#4285F4" d="M46.98 24.5c0-1.6-.15-3.2-.43-4.7H24v9h12.9c-.56 3-2.24 5.5-4.77 7.2l7.5 5.8c4.4-4 6.9-10 6.9-17.3z"/><path fill="#FBBC05" d="M10.4 28.7a14.5 14.5 0 010-9.4l-7.8-6.1a24 24 0 000 21.6l7.8-6.1z"/><path fill="#34A853" d="M24 48c6.5 0 11.9-2.1 15.9-5.8l-7.5-5.8c-2.1 1.4-4.8 2.2-8.4 2.2-6.4 0-11.7-3.7-13.6-9.8l-7.8 6.1C6.5 42.6 14.6 48 24 48z"/></svg>`
@@ -1532,8 +1723,8 @@ const gate = (m) => (me?.auth ? signInScreen(m) : passcodeScreen(m))
 
 function accountButton() {
   const b = $('acct')
-  b.innerHTML = me?.signedIn && me.user.picture ? `<img src="${esc(me.user.picture)}" alt="">settings`
-    : `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/></svg>settings`
+  b.innerHTML = me?.signedIn && me.user.picture ? `<img src="${esc(me.user.picture)}" alt="" referrerpolicy="no-referrer">`
+    : `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/></svg>`
   b.onclick = settingsSheet
 }
 
