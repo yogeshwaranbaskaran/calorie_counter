@@ -26,7 +26,10 @@ function meHasKey(user) {
 
 export default async function handler(req, res) {
   const url = new URL(req.url, 'http://x')
-  const action = url.pathname.replace('/api/auth', '').replace(/^\//, '') || 'me'
+  // On Vercel, vercel.json rewrites /api/auth/<action> to /api/auth?action=<action>;
+  // under server.js the action is still in the path.
+  const action = url.searchParams.get('action')
+    || url.pathname.replace('/api/auth', '').replace(/^\//, '') || 'me'
 
   if (!authConfigured() && action !== 'me') {
     return send(res, 501, { error: 'Google sign-in is not configured on this server' })
